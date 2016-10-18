@@ -20,7 +20,7 @@ from __future__ import print_function
 import requests
 import json
 import argparse
-from sys import stdin, stderr, exit
+import sys
 
 # Optional module
 try:
@@ -30,51 +30,107 @@ except:
     print("Missing optional python module: argcomplete\n"
           "Install it to enable bash auto-magic tab-completion:\n"
           "  yum/dnf install python-pip; pip install argcomplete\n"
-          "  activate-global-python-argcomplete; (Then restart shell)\n", file=stderr)
+          "  activate-global-python-argcomplete; (Then restart shell)\n", file=sys.stderr)
     haveArgcomplete = False
 
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.1'
-vers['date'] = '2016/10/17'
-rhApiUrl = 'https://access.redhat.com/labs/securitydataapi'
+vers['version'] = '0.1.2'
+vers['date'] = '2016/10/18'
 defaultFields = "threat_severity,bugzilla,affected_release,package_state"
 
 
-def fpaste(inputdata, lang='text', paste_user=None, paste_password=None, paste_private='yes', paste_expire=2419200, paste_project=None, url='http://paste.fedoraproject.org'):
+class RedHatSecDataApiClient:
+    """Portable object to interface with the Red Hat Security Data API.
+
+    https://access.redhat.com/documentation/en/red-hat-security-data-api/
+
+    Requires:
+      requests
+      sys
+    """
+    def __init__(self, progressToStderr=False, apiurl='https://access.redhat.com/labs/securitydataapi'):
+        self.apiurl = apiurl
+        self.progressToStderr = progressToStderr
+
+    def __validate_data_type(self, dt):
+        dataTypes = ['cvrf', 'cve', 'oval']
+        if dt not in dataTypes:
+            raise ValueError("Invalid data type ('{0}') requested; should be one of: {1}".format(dt, ", ".join(dataTypes)))
+
+    def __get(self, url):
+        url = self.apiurl + url
+        if self.progressToStderr:
+            print("Getting '{0}' ...".format(url), file=sys.stderr)
+        r = requests.get(url)
+        r.raise_for_status()
+        return url, r.json()
+
+    def _search(self, dataType, params=None):
+        self.__validate_data_type(dataType)
+        url = '/{0}.json'.format(dataType)
+        if params:
+            url += '?{0}'.format(params)
+        return self.__get(url)
+
+    def _retrieve(self, dataType, query):
+        self.__validate_data_type(dataType)
+        url = '/{0}/{1}.json'.format(dataType, query)
+        return self.__get(url)
+
+    def search_cvrf(self, params=None):
+        return self._search('cvrf', params)
+
+    def search_cve(self, params=None):
+        return self._search('cve', params)
+
+    def search_oval(self, params=None):
+        return self._search('oval', params)
+
+    def get_cvrf(self, rhsa):
+        return self._retrieve('cvrf', rhsa)
+
+    def get_cvrf_oval(self, rhsa):
+        return self._retrieve('cvrf', '{0}/oval'.format(rhsa))
+
+    def get_cve(self, cve):
+        return self._retrieve('cve', cve)
+
+    def get_oval(self, rhsa):
+        return self._retrieve('oval', rhsa)
+
+
+def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', expire=2419200, project=None, url='http://paste.fedoraproject.org'):
+    """Submit a new paste to fedora project pastebin."""
     p = {
         'paste_data': inputdata,
         'paste_lang': lang,
         'api_submit': 'true',
         'mode': 'json',
-        'paste_private': paste_private,
-        'paste_expire': str(paste_expire),
+        'paste_private': private,
+        'paste_expire': str(expire),
         }
-    if paste_user:
-        p['paste_user'] = paste_user
-    if paste_password:
-        p['paste_password'] = paste_password
-    if paste_project:
-        p['paste_project'] = paste_project
-    req = requests.post(url, p)
-    if req.status_code == 200:
-        j = req.json()
-        if j.has_key('error'):
-            print(json.dumps(j, sort_keys=True, indent=2))
-            exit(1)
-        pasteUrl = '{0}/{1}'.format(url, j['result']['id'])
-        if 'yes' in paste_private and j['result'].has_key('hash'):
-            pasteUrl += '/{0}'.format(j['result']['hash'])
-        print(pasteUrl)
-    else:
-        print("HTTP error {0} connecting to {1}".format(req.status_code, url), file=stderr)
-        exit(1)
+    if user:
+        p['paste_user'] = user
+    if password:
+        p['paste_password'] = password
+    if project:
+        p['paste_project'] = project
+    r = requests.post(url, p)
+    r.raise_for_status()
+    j = r.json()
+    if j.has_key('error'):
+        print(json.dumps(j, sort_keys=True, indent=2))
+        sys.exit(1)
+    pasteUrl = '{0}/{1}'.format(url, j['result']['id'])
+    if 'yes' in private and j['result'].has_key('hash'):
+        pasteUrl += '/{0}'.format(j['result']['hash'])
+    print(pasteUrl)
 
 
 class CustomFormatter(argparse.RawDescriptionHelpFormatter):
     """This custom formatter eliminates the duplicate metavar in help lines."""
-
     def _format_action_invocation(self, action):
         if not action.option_strings:
             metavar, = self._metavar_formatter(action, action.dest)(1)
@@ -121,19 +177,19 @@ def parse_args():
         help="Narrow down results to after a certain time period")
     g0.add_argument(
         '--bug', metavar='BZID',
-        help="Narrow down results by Bugzilla ID")
+        help="Narrow down results by Bugzilla ID (specify one or more, e.g.: '1326598,1084875')")
     g0.add_argument(
-        '--advisory', metavar='RHXA-YEAR:NNNN',
-        help="Narrow down results by errata advisory (e.g.: 'RHSA-2016:1422' or 'RHEA-2016:1155')")
+        '--advisory', metavar='RHSA',
+        help="Narrow down results by errata advisory (specify one or more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')")
     g0.add_argument(
-        '--severity', choices=['low', 'moderate', 'important', 'critical'],
-        help="Narrow down results by severity rating (impact)")
+        '--severity', metavar='IMPACT', choices=['low', 'moderate', 'important', 'critical'],
+        help="Narrow down results by severity rating (specify one of 'low', 'moderate', 'important', or 'critical')")
     g0.add_argument(
         '--package', metavar='PKG',
-        help="Narrow down results by package name")
+        help="Narrow down results by package name (e.g.: 'samba' or 'thunderbird')")
     g0.add_argument(
-        '--cwe', metavar='NNN',
-        help="Narrow down results by CWE ID")
+        '--cwe', metavar='CWEID',
+        help="Narrow down results by CWE ID (specify one or more, e.g.: '295,300')")
     g0.add_argument(
         '--cvss_score', metavar='SCORE',
         help="Narrow down results by CVSS base score (e.g.: '8.0')")
@@ -142,7 +198,7 @@ def parse_args():
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
     g0.add_argument(
         '--rawquery',
-        help="Narrow down results by RAWQUERY (e.g.: 'a=b' or 'e=f&x=y'")
+        help="Narrow down results by RAWQUERY (e.g.: 'per_page=500' or 'a=b&x=y'")
     g00 = p.add_argument_group(
         'PERFORM CVE QUERIES',
         description="Search by CVE in addition to or instead above search query")
@@ -158,18 +214,29 @@ def parse_args():
         '--fields', default=defaultFields,
         help="Comma-separated fields to be displayed (default: {0})".format(defaultFields))
     gg1.add_argument(
-        '-a', '--all', dest='extractAllFields', action='store_true',
+        '-a', '--all', dest='fields', action='store_const',
+        const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,acknowledgement,details,statement,affected_release,package_state',
         help="Print all supported fields (currently: threat_severity, public_date, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, affected_release, package_state)")
     gg1.add_argument(
+        '-m', '--most', dest='fields', action='store_const',
+        const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,affected_release,package_state',
+        help="Print all fields except the heavy-text ones -- acknowledgement, details, statement")
+    gg1.add_argument(
         '-j', '--json', action='store_true',
-        help="Print full JSON output; note that this option cannot be used with '--fields' or '--all'")
+        help="Print full & raw JSON output")
     g1.add_argument(
         '-u', '--urls', dest='printUrls', action='store_true',
         help="Print URLs for all relevant fields")
     g2 = p.add_argument_group(
         'GENERAL OPTIONS')
     g2.add_argument(
-        '-p', '--paste', action='store_true',
+        '-c', '--count', action='store_true',
+        help="Print a count of the number of entities found")
+    g2.add_argument(
+        '-v', '--verbose', action='store_true',
+        help="Print API urls to stderr")
+    g2.add_argument(
+        '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
     g2.add_argument(
         '--paste_lang', metavar='LANG', default='text',
@@ -191,196 +258,254 @@ def parse_args():
         '--paste_project', metavar='PROJECT',
         help="Associate paste with a project")
     g2.add_argument(
-        '--apiurl', default=rhApiUrl,
-        help="Set Security Data API URL (default: {0})".format(rhApiUrl))
-    g2.add_argument(
         '-h', '--help', dest='showHelp', action='store_true',
         help="Show this help message and exit")
     o = p.parse_args()
-    # Parse and return
     if haveArgcomplete:
+        # Parse and return
         argcomplete.autocomplete(p)
-    o.searchQuery = ""
+    o.searchQuery = ''
     if o.before:
-        o.searchQuery += "&before={0}".format(o.before)
+        o.searchQuery += '&before={0}'.format(o.before)
     if o.after:
-        o.searchQuery += "&after={0}".format(o.after)
+        o.searchQuery += '&after={0}'.format(o.after)
     if o.bug:
-        o.searchQuery += "&bug={0}".format(o.bug)
+        o.searchQuery += '&bug={0}'.format(o.bug)
     if o.advisory:
-        o.searchQuery += "&advisory={0}".format(o.advisory)
+        o.searchQuery += '&advisory={0}'.format(o.advisory)
     if o.severity:
-        o.searchQuery += "&severity={0}".format(o.severity)
+        o.searchQuery += '&severity={0}'.format(o.severity)
     if o.package:
-        o.searchQuery += "&package={0}".format(o.package)
+        o.searchQuery += '&package={0}'.format(o.package)
     if o.cwe:
-        o.searchQuery += "&cwe={0}".format(o.cwe)
+        o.searchQuery += '&cwe={0}'.format(o.cwe)
     if o.cvss_score:
-        o.searchQuery += "&cvss_score={0}".format(o.cvss_score)
+        o.searchQuery += '&cvss_score={0}'.format(o.cvss_score)
     if o.cvss3_score:
-        o.searchQuery += "&cvss3_score={0}".format(o.cvss3_score)
+        o.searchQuery += '&cvss3_score={0}'.format(o.cvss3_score)
     if o.rawquery:
-        o.searchQuery += o.rawquery
+        o.searchQuery += '&{0}'.format(o.rawquery)
     if o.showHelp or not (len(o.searchQuery) or o.cves):
         p.print_help()
-        exit()
+        sys.exit()
     return o
 
 
-class RedHatSecDataApi:
-    """."""
+class RHSecApiParse:
+    """Parse and print results returned from RedHatSecDataApiClient.
 
-    def __init__(self, extractAllFields=False, fields=defaultFields, printUrls=False, json=False, paste=False, apiurl=rhApiUrl):
-        self.extractAllFields = extractAllFields
+    Requires:
+      RedHatSecDataApiClient
+      json
+      sys
+      requests
+    """
+
+    def __init__(self, fields='threat_severity,bugzilla,affected_release,package_state',
+                 printUrls=False, rawOutput=False, pastebin=False, onlyCount=False, verbose=False):
+        """Initialize class settings."""
+        self.rhsda = RedHatSecDataApiClient(verbose)
         try:
             if len(fields):
                 self.desiredFields = fields.split(",")
             else:
                 self.desiredFields = []
         except:
-            print("Error parsing fields\n")
+            print("Error parsing fields\n", file=sys.stderr)
             raise
         self.printUrls = printUrls
-        self.json = json
-        self.apiurl = apiurl
+        self.rawOutput = rawOutput
         self.output = ""
-        if paste:
+        if pastebin:
             self.Print = self.paste_printer
-        else:
-            self.Print = self.print_printer
+        self.onlyCount = onlyCount
+        self.cveCount = 0
 
-    def paste_printer(self, text):
-        self.output += text
-
-    def print_printer(self, text):
+    def Print(self, text):
+        """Print text to stdout."""
         print(text, end="")
 
-    def check_field(self, field, jsoninput):
-        if (self.extractAllFields or field in self.desiredFields) and jsoninput.has_key(field):
+    def paste_printer(self, text):
+        """Append text to buffer for later pastebin."""
+        self.output += text
+
+    def jprint(self, jsoninput):
+        """Pretty-print jsoninput to stdout."""
+        return json.dumps(jsoninput, sort_keys=True, indent=2)
+
+    def search_query(self, params):
+        """Perform a CVE search query based on params."""
+        try:
+            url, result = self.rhsda.search_cve(params)
+        except requests.exceptions.ConnectionError as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            sys.exit(1)
+        except requests.exceptions.HTTPError as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            sys.exit(1)
+        except requests.exceptions.RequestException as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            sys.exit(1)
+        print("Search query results found: {0}".format(len(result)), file=sys.stderr)
+        if not self.onlyCount:
+            print(file=sys.stderr)
+        return result   
+
+    def _check_field(self, field, jsoninput):
+        """Return True if field is desired and exists in jsoninput."""
+        if field in self.desiredFields and jsoninput.has_key(field):
             return True
         return False
 
-    def search_query(self, querystring, returnData=False):
-        url = "{0}/cve.json?{1}".format(self.apiurl, querystring)
-        if not returnData:
-            self.Print("Search query: '{0}' ...\n".format(url))
-        req = requests.get(url)
-        if req.status_code == 200:
-            if returnData:
-                return req.json()
-            self.Print(json.dumps(req.json(), sort_keys=True, indent=2))
-        else:
-            self.Print("[]\n")
-        self.Print("\n")
-
-    def stripjoin(self, input):
+    def _stripjoin(self, input):
+        """Strip whitespace from input or input list."""
         text = ""
         if isinstance(input, list):
             for i in input:
-                text += i.strip()
+                text += i.encode('utf-8').strip()
                 text += " "
         else:
-            text = input.strip()
+            text = input.encode('utf-8').strip()
         return text
 
-    def query_cve(self, cve):
-        req = requests.get("{0}/cve/{1}.json".format(self.apiurl, cve))
-        if req.status_code == 200:
-            j = req.json()
-            if self.json:
-                self.Print(json.dumps(j, sort_keys=True, indent=2))
-            else:
-                name = ""
-                if cve != j['name']:
-                    name = " [{0}]".format(j['name'])
-                url = ""
+    def print_cve(self, cve):
+        """Print CVE data."""
+        try:
+            requrl, j = self.rhsda.get_cve(cve)
+        except requests.exceptions.ConnectionError as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            sys.exit(1)
+        except requests.exceptions.HTTPError as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            if not self.onlyCount:
+                self.Print("{0}\n Not present in Red Hat CVE database\n".format(cve))
+                if cve.startswith("CVE-"):
+                    self.Print(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
+            return
+        except requests.exceptions.RequestException as e:
+            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            sys.exit(1)
+
+        # If --count was used, done
+        if self.onlyCount:
+            self.cveCount += 1
+            return
+
+        # If --json was used, done
+        if self.rawOutput:
+            self.Print(self.jprint(j))
+            return
+
+        # CVE name always printed
+        name = ""
+        if cve != j['name']:
+            name = " [{0}]".format(j['name'])
+        url = ""
+        if self.printUrls:
+            url = " (https://access.redhat.com/security/cve/{0})".format(cve)
+        self.Print("{0}{1}{2}\n".format(cve, name, url))
+
+        # If --fields='' was used, done
+        if not self.desiredFields:
+            return
+
+        if self._check_field('threat_severity', j):
+            url = ""
+            if self.printUrls:
+                url = " (https://access.redhat.com/security/updates/classification)"
+            self.Print("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
+
+        if self._check_field('public_date', j):
+            self.Print("  PUBLIC_DATE:  {0}\n".format(j['public_date']))
+
+        if self._check_field('cwe', j):
+            url = ""
+            if self.printUrls:
+                url = " (http://cwe.mitre.org/data/definitions/{0}.html)".format(j['cwe'].lstrip("CWE-"))
+            self.Print("  CWE:  {0}{1}\n".format(j['cwe'], url))
+
+        if self._check_field('cvss', j):
+            cvss_scoring_vector = j['cvss']['cvss_scoring_vector']
+            if self.printUrls:
+                cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector=({0})".format(cvss_scoring_vector)
+            self.Print("  CVSS:  {0} [{1}]\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
+
+        if self._check_field('cvss3', j):
+            cvss3_scoring_vector = j['cvss3']['cvss3_scoring_vector']
+            if self.printUrls:
+                cvss3_scoring_vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(cvss3_scoring_vector)
+            self.Print("  CVSS3:  {0} [{1}]\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
+
+        if 'bugzilla' in self.desiredFields:
+            if j.has_key('bugzilla'):
                 if self.printUrls:
-                    url = " (https://access.redhat.com/security/cve/{0})".format(cve)
-                self.Print("{0}{1}{2}\n".format(cve, name, url))
-                if not self.desiredFields:
-                    return
-                if self.check_field('threat_severity', j):
-                    url = ""
-                    if self.printUrls:
-                        url = " (https://access.redhat.com/security/updates/classification)"
-                    self.Print("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
-                if self.check_field('public_date', j):
-                    self.Print("  PUBLIC_DATE:  {0}\n".format(j['public_date']))
-                if self.check_field('cwe', j):
-                    url = ""
-                    if self.printUrls:
-                        url = " (http://cwe.mitre.org/data/definitions/{0}.html)".format(j['cwe'].lstrip("CWE-"))
-                    self.Print("  CWE:  {0}{1}\n".format(j['cwe'], url))
-                if self.check_field('cvss', j):
-                    cvss_scoring_vector = j['cvss']['cvss_scoring_vector']
-                    if self.printUrls:
-                        cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector=({0})".format(cvss_scoring_vector)
-                    self.Print("  CVSS:  {0} [{1}]\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
-                if self.check_field('cvss3', j):
-                    cvss3_scoring_vector = j['cvss3']['cvss3_scoring_vector']
-                    if self.printUrls:
-                        cvss3_scoring_vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(cvss3_scoring_vector)
-                    self.Print("  CVSS3:  {0} [{1}]\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
-                if 'bugzilla' in self.desiredFields:
-                    if j.has_key('bugzilla'):
-                        bug = j['bugzilla']['id']
-                        if self.printUrls:
-                            bug = j['bugzilla']['url']
-                        self.Print("  BUGZILLA:  {0}\n".format(bug))
-                    else:
-                        self.Print("  BUGZILLA:  No Bugzilla data\n")
-                        self.Print("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy\n")
-                if self.check_field('acknowledgement', j):
-                    self.Print("  ACKNOWLEDGEMENT:  {0}\n".format(j['acknowledgement'].strip()))
-                if self.check_field('details', j):
-                    self.Print("  DETAILS:  {0}\n".format(self.stripjoin(j['details'])))
-                if self.check_field('statement', j):
-                    self.Print("  STATEMENT:  {0}\n".format(self.stripjoin(j['statement'])))
-                if self.check_field('affected_release', j):
-                    self.Print("  AFFECTED_RELEASE (ERRATA)\n")
-                    affected_release = j['affected_release']
-                    if isinstance(affected_release, dict):
-                        affected_release = [affected_release]
-                    for release in affected_release:
-                        package = ""
-                        if release.has_key('package'):
-                            package = " [{0}]".format(release['package'])
-                        advisory = release['advisory']
-                        if self.printUrls:
-                            advisory = "https://access.redhat.com/errata/{0}".format(advisory)
-                        self.Print("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
-                if self.check_field('package_state', j):
-                    self.Print("  PACKAGE_STATE\n")
-                    package_state = j['package_state']
-                    if isinstance(package_state, dict):
-                        package_state = [package_state]
-                    for state in package_state:
-                        package_name = ""
-                        if state.has_key('package_name'):
-                            package_name = " [{0}]".format(state['package_name'])
-                        self.Print("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
-        else:
-            self.Print("{0}\n Not present in Red Hat CVE database\n".format(cve))
-            if cve.startswith("CVE-"):
-                self.Print(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n".format(cve))
+                    bug = j['bugzilla']['url']
+                else:
+                    bug = j['bugzilla']['id']
+                self.Print("  BUGZILLA:  {0}\n".format(bug))
+            else:
+                self.Print("  BUGZILLA:  No Bugzilla data\n")
+                self.Print("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy\n")
+
+        if self._check_field('acknowledgement', j):
+            self.Print("  ACKNOWLEDGEMENT:  {0}\n".format(self._stripjoin(j['acknowledgement'])))
+
+        if self._check_field('details', j):
+            self.Print("  DETAILS:  {0}\n".format(self._stripjoin(j['details'])))
+
+        if self._check_field('statement', j):
+            self.Print("  STATEMENT:  {0}\n".format(self._stripjoin(j['statement'])))
+
+        if self._check_field('affected_release', j):
+            self.Print("  AFFECTED_RELEASE (ERRATA)\n")
+            affected_release = j['affected_release']
+            if isinstance(affected_release, dict):
+                # When there's only one, it doesn't show up in a list
+                affected_release = [affected_release]
+            for release in affected_release:
+                package = ""
+                if release.has_key('package'):
+                    package = " [{0}]".format(release['package'])
+                advisory = release['advisory']
+                if self.printUrls:
+                    advisory = "https://access.redhat.com/errata/{0}".format(advisory)
+                self.Print("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
+
+        if self._check_field('package_state', j):
+            self.Print("  PACKAGE_STATE\n")
+            package_state = j['package_state']
+            if isinstance(package_state, dict):
+                # When there's only one, it doesn't show up in a list
+                package_state = [package_state]
+            for state in package_state:
+                package_name = ""
+                if state.has_key('package_name'):
+                    package_name = " [{0}]".format(state['package_name'])
+                self.Print("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
+
+        # Add one final newline to the end
         self.Print("\n")
 
 
 def main(opts):
-    a = RedHatSecDataApi(opts.extractAllFields, opts.fields, opts.printUrls, opts.json, opts.paste, opts.apiurl)
+    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose)
     if len(opts.searchQuery):
+        result = a.search_query(opts.searchQuery)
         if opts.extract_search:
-            result = a.search_query(opts.searchQuery, returnData=True)
             if result:
                 for i in result:
                     opts.cves.append(i['CVE'])
-        else:
-            a.search_query(opts.searchQuery)
+        elif not opts.count:
+            a.Print(a.jprint(result))
+            a.Print("\n")
     if opts.cves:
         for cve in opts.cves:
-            a.query_cve(cve)
-    if opts.paste:
-        fpaste(a.output, opts.paste_lang, opts.paste_user, opts.paste_password, opts.paste_private, opts.paste_expire, opts.paste_project)
+            a.print_cve(cve)
+        if opts.count:
+            print("Valid CVE results found: {0} of {1}".format(a.cveCount, len(opts.cves)), file=sys.stderr)
+            print("Invalid CVE queries: {0} of {1}".format(len(opts.cves)-a.cveCount, len(opts.cves)), file=sys.stderr)
+    if opts.pastebin:
+        fpaste_it(a.output, opts.paste_lang, opts.paste_user, opts.paste_password, opts.paste_private, opts.paste_expire, opts.paste_project)
 
 
 if __name__ == "__main__":
@@ -389,4 +514,4 @@ if __name__ == "__main__":
         main(opts)
     except KeyboardInterrupt:
         print("\nReceived KeyboardInterrupt. Exiting.")
-        exit()
+        sys.exit()
