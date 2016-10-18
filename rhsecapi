@@ -21,6 +21,8 @@ import requests
 import json
 import argparse
 from sys import stdin, stderr, exit
+
+# Optional module
 try:
     import argcomplete
     haveArgcomplete = True
@@ -31,6 +33,7 @@ except:
           "  activate-global-python-argcomplete; (Then restart shell)\n", file=stderr)
     haveArgcomplete = False
 
+# Globals
 prog = 'rhsecapi'
 vers = {}
 vers['version'] = '0.1.1'
@@ -111,11 +114,23 @@ def parse_args():
         'PERFORM GENERAL SEARCH QUERY',
         description="Initiate a single search query and print JSON results")
     g0.add_argument(
-        '--severity', choices=['low', 'moderate', 'important', 'critical'],
-        help="Narrow down results by severity rating (impact)")
+        '--before', metavar='YEAR-MM-DD',
+        help="Narrow down results to before a certain time period")
+    g0.add_argument(
+        '--after', metavar='YEAR-MM-DD',
+        help="Narrow down results to after a certain time period")
     g0.add_argument(
         '--bug', metavar='BZID',
         help="Narrow down results by Bugzilla ID")
+    g0.add_argument(
+        '--advisory', metavar='RHXA-YEAR:NNNN',
+        help="Narrow down results by errata advisory (e.g.: 'RHSA-2016:1422' or 'RHEA-2016:1155')")
+    g0.add_argument(
+        '--severity', choices=['low', 'moderate', 'important', 'critical'],
+        help="Narrow down results by severity rating (impact)")
+    g0.add_argument(
+        '--package', metavar='PKG',
+        help="Narrow down results by package name")
     g0.add_argument(
         '--cwe', metavar='NNN',
         help="Narrow down results by CWE ID")
@@ -125,18 +140,6 @@ def parse_args():
     g0.add_argument(
         '--cvss3_score', metavar='SCORE',
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
-    g0.add_argument(
-        '--package', metavar='PKG',
-        help="Narrow down results by package name")
-    g0.add_argument(
-        '--before', metavar='YEAR-MM-DD',
-        help="Narrow down results to before a certain time period")
-    g0.add_argument(
-        '--after', metavar='YEAR-MM-DD',
-        help="Narrow down results to after a certain time period")
-    g0.add_argument(
-        '--advisory', metavar='RHXA-YEAR:NNNN',
-        help="Narrow down results by errata advisory (e.g.: 'RHSA-2016:1422' or 'RHEA-2016:1155')")
     g0.add_argument(
         '--rawquery',
         help="Narrow down results by RAWQUERY (e.g.: 'a=b' or 'e=f&x=y'")
@@ -198,24 +201,24 @@ def parse_args():
     if haveArgcomplete:
         argcomplete.autocomplete(p)
     o.searchQuery = ""
-    if o.severity:
-        o.searchQuery += "&severity={0}".format(o.severity)
+    if o.before:
+        o.searchQuery += "&before={0}".format(o.before)
+    if o.after:
+        o.searchQuery += "&after={0}".format(o.after)
     if o.bug:
         o.searchQuery += "&bug={0}".format(o.bug)
+    if o.advisory:
+        o.searchQuery += "&advisory={0}".format(o.advisory)
+    if o.severity:
+        o.searchQuery += "&severity={0}".format(o.severity)
+    if o.package:
+        o.searchQuery += "&package={0}".format(o.package)
     if o.cwe:
         o.searchQuery += "&cwe={0}".format(o.cwe)
     if o.cvss_score:
         o.searchQuery += "&cvss_score={0}".format(o.cvss_score)
     if o.cvss3_score:
         o.searchQuery += "&cvss3_score={0}".format(o.cvss3_score)
-    if o.package:
-        o.searchQuery += "&package={0}".format(o.package)
-    if o.before:
-        o.searchQuery += "&before={0}".format(o.before)
-    if o.after:
-        o.searchQuery += "&after={0}".format(o.after)
-    if o.advisory:
-        o.searchQuery += "&advisory={0}".format(o.advisory)
     if o.rawquery:
         o.searchQuery += o.rawquery
     if o.showHelp or not (len(o.searchQuery) or o.cves):
