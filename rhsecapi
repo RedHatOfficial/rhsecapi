@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # PYTHON_ARGCOMPLETE_OK
 #-------------------------------------------------------------------------------
-# Copyright 2016 Ryan Sawhill Aroha <rsaw@redhat.com>
+# Copyright 2016 Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -114,7 +114,7 @@ def parse_args():
         '--severity', choices=['low', 'moderate', 'important', 'critical'],
         help="Narrow down results by severity rating (impact)")
     g0.add_argument(
-        '--bugzilla', metavar='BUGID',
+        '--bug', metavar='BZID',
         help="Narrow down results by Bugzilla ID")
     g0.add_argument(
         '--cwe', metavar='NNN',
@@ -200,8 +200,8 @@ def parse_args():
     o.searchQuery = ""
     if o.severity:
         o.searchQuery += "&severity={0}".format(o.severity)
-    if o.bugzilla:
-        o.searchQuery += "&bug={0}".format(o.bugzilla)
+    if o.bug:
+        o.searchQuery += "&bug={0}".format(o.bug)
     if o.cwe:
         o.searchQuery += "&cwe={0}".format(o.cwe)
     if o.cvss_score:
