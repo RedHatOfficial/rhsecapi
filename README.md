@@ -2,7 +2,7 @@
 
 Threw this new `rhsecapi` tool together quickly to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
 
-No promises that anything will stay the same as long as it's under 1.0 and the API is still beta. I might change the name or the options. I haven't thoroughly-tested yet. (Expect further releases.) I welcome feedback/issues and pull requests.
+No promises that anything will stay the same as long as it's under 1.0 and the API is still beta. I might change the name or the options. I haven't thoroughly-tested yet. (Expect further releases.) I welcome feedback/issues and pull requests. If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
 ### Simple CVE Queries
 
@@ -105,8 +105,21 @@ CVE-2016-5387
   CVSS:  5.0 [AV:N/AC:L/Au:N/C:N/I:P/A:N]
   CVSS3:  5.0 [CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N]
   BUGZILLA:  1353755
-  ACKNOWLEDGEMENT:  Red Hat would like to thank Scott Geary (VendHQ) for reporting this issue.
-  DETAILS:  The Apache HTTP Server through 2.4.23 follows RFC 3875 section 4.1.18 and therefore does not protect applications from the presence of untrusted client data in the HTTP_PROXY environment variable, which might allow remote attackers to redirect an application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy header in an HTTP request, aka an "httpoxy" issue.  NOTE: the vendor states "This mitigation has been assigned the identifier CVE-2016-5387"; in other words, this is not a CVE ID for a vulnerability. It was discovered that httpd used the value of the Proxy header from HTTP requests to initialize the HTTP_PROXY environment variable for CGI scripts, which in turn was incorrectly used by certain HTTP client implementations to configure the proxy for outgoing HTTP requests. A remote attacker could possibly use this flaw to redirect HTTP requests performed by a CGI script to an attacker-controlled proxy via a malicious HTTP request. 
+  ACKNOWLEDGEMENT:  
+   Red Hat would like to thank Scott Geary (VendHQ) for reporting this issue.
+  DETAILS:  
+   The Apache HTTP Server through 2.4.23 follows RFC 3875 section 4.1.18 and therefore
+   does not protect applications from the presence of untrusted client data in the
+   HTTP_PROXY environment variable, which might allow remote attackers to redirect an
+   application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy
+   header in an HTTP request, aka an "httpoxy" issue.  NOTE: the vendor states "This
+   mitigation has been assigned the identifier CVE-2016-5387"; in other words, this is
+   not a CVE ID for a vulnerability.  It was discovered that httpd used the value of the
+   Proxy header from HTTP requests to initialize the HTTP_PROXY environment variable for
+   CGI scripts, which in turn was incorrectly used by certain HTTP client
+   implementations to configure the proxy for outgoing HTTP requests. A remote attacker
+   could possibly use this flaw to redirect HTTP requests performed by a CGI script to
+   an attacker-controlled proxy via a malicious HTTP request.
   AFFECTED_RELEASE (ERRATA)
    Red Hat Enterprise Linux 5 [httpd-2.2.3-92.el5_11]: RHSA-2016:1421
    Red Hat Enterprise Linux 6 [httpd-2.2.15-54.el6_8]: RHSA-2016:1421
@@ -192,8 +205,8 @@ usage: rhsecapi [--before YEAR-MM-DD] [--after YEAR-MM-DD] [--bug BZID]
                 [--advisory RHSA] [--severity IMPACT] [--package PKG]
                 [--cwe CWEID] [--cvss_score SCORE] [--cvss3_score SCORE]
                 [--rawquery RAWQUERY] [-x] [--fields FIELDS | -a | -m | -j]
-                [-u] [-c] [-v] [-p] [--paste_lang LANG] [--paste_user NAME]
-                [--paste_password PASSWD] [--paste_public]
+                [-u] [-w [WIDTH]] [-c] [-v] [-p] [--paste_lang LANG]
+                [--paste_user NAME] [--paste_password PASSWD] [--paste_public]
                 [--paste_expire SECS] [--paste_project PROJECT] [-h]
                 [CVE [CVE ...]]
 
@@ -244,13 +257,19 @@ CVE QUERY DISPLAY OPTIONS:
   -u, --urls            Print URLs for all relevant fields
 
 GENERAL OPTIONS:
+  -w, --wrap [WIDTH]    Change wrap-width of long fields (acknowledgement,
+                        details, statement) in non-json output from default
+                        where wrapping is done with a WIDTH equivalent to
+                        (TERMWIDTH - 2); specify WIDTH of 0 to disable
+                        wrapping; specify option but ommit WIDTH to set WIDTH
+                        to 70
   -c, --count           Print a count of the number of entities found
   -v, --verbose         Print API urls to stderr
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
   --paste_lang LANG     Set the development language for the paste (default:
                         'text')
-  --paste_user NAME     Set alphanumeric paste author
+  --paste_user NAME     Set alphanumeric paste author (default: 'rhsecapi')
   --paste_password PASSWD
                         Set password string to protect paste
   --paste_public        Set paste to be publicly-discoverable
@@ -262,6 +281,78 @@ GENERAL OPTIONS:
   -h, --help            Show this help message and exit
 
 VERSION:
-  rhsecapi v0.1.2 last mod 2016/10/18
+  rhsecapi v0.1.4 last mod 2016/10/20
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
+```
+
+### Testing from python shell
+
+```
+$ python
+>>> import rhsecapi as r
+>>> a = r.RedHatSecDataApiClient()
+>>> help(a)
+Help on instance of RedHatSecDataApiClient in module rhsecapi:
+
+class RedHatSecDataApiClient
+ |  Portable object to interface with the Red Hat Security Data API.
+ |  
+ |  https://access.redhat.com/documentation/en/red-hat-security-data-api/
+ |  
+ |  Requires:
+ |    requests
+ |    sys
+ |  
+ |  Methods defined here:
+ |  
+ |  __init__(self, progressToStderr=False, apiurl='https://access.redhat.com/labs/securitydataapi')
+ |  
+ |  get_cve(self, cve)
+ |  
+ |  get_cvrf(self, rhsa)
+ |  
+ |  get_cvrf_oval(self, rhsa)
+ |  
+ |  get_oval(self, rhsa)
+ |  
+ |  search_cve(self, params=None)
+ |  
+ |  search_cvrf(self, params=None)
+ |  
+ |  search_oval(self, params=None)
+(END)
+>>> a.search_oval("cve=CVE-2016-5387")
+('https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387', [{u'severity': u'important', u'bugzillas': [u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1421', u'CVEs': [u'CVE-2016-5387']}, {u'severity': u'important', u'bugzillas': [u'1347648', u'1353269', u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1422', u'CVEs': [u'CVE-2016-5387']}])
+>>> r.jprint(a.search_oval("cve=CVE-2016-5387"))
+[
+  "https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387", 
+  [
+    {
+      "CVEs": [
+        "CVE-2016-5387"
+      ], 
+      "RHSA": "RHSA-2016:1421", 
+      "bugzillas": [
+        "1353755"
+      ], 
+      "released_on": "2016-07-18T04:00:00+00:00", 
+      "resource_url": "https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json", 
+      "severity": "important"
+    }, 
+    {
+      "CVEs": [
+        "CVE-2016-5387"
+      ], 
+      "RHSA": "RHSA-2016:1422", 
+      "bugzillas": [
+        "1347648", 
+        "1353269", 
+        "1353755"
+      ], 
+      "released_on": "2016-07-18T04:00:00+00:00", 
+      "resource_url": "https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json", 
+      "severity": "important"
+    }
+  ]
+]
 ```
