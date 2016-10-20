@@ -19,8 +19,8 @@
 from __future__ import print_function
 import argparse
 from sys import exit, stderr
-
-# Additional modules moved to __main__ to optimize load-time with tab-completion
+import requests, json, re
+import textwrap, fcntl, termios, struct
 
 # Optional module
 try:
@@ -121,12 +121,21 @@ def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', e
     r.raise_for_status()
     j = r.json()
     if j.has_key('error'):
-        print(json.dumps(j, sort_keys=True, indent=2))
+        jprint(j)
         exit(1)
     pasteUrl = '{0}/{1}'.format(url, j['result']['id'])
     if 'yes' in private and j['result'].has_key('hash'):
         pasteUrl += '/{0}'.format(j['result']['hash'])
     print(pasteUrl)
+
+
+def jprint(jsoninput, printOutput=True):
+    """Pretty-print jsoninput."""
+    j = json.dumps(jsoninput, sort_keys=True, indent=2)
+    if printOutput:
+        print(j)
+    else:
+        return j
 
 
 class CustomFormatter(argparse.RawDescriptionHelpFormatter):
@@ -346,10 +355,6 @@ class RHSecApiParse:
         """Append text to buffer for later pastebin."""
         self.output += text
 
-    def jprint(self, jsoninput):
-        """Pretty-print jsoninput to stdout."""
-        return json.dumps(jsoninput, sort_keys=True, indent=2)
-
     def get_terminal_width(self):
         h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
         return w
@@ -417,7 +422,7 @@ class RHSecApiParse:
 
         # If --json was used, done
         if self.rawOutput:
-            self.Print(self.jprint(j))
+            self.Print(jprint(j, False))
             return
 
         # CVE name always printed
@@ -520,7 +525,7 @@ def main(opts):
                 for i in result:
                     opts.cves.append(i['CVE'])
         elif not opts.count:
-            a.Print(a.jprint(result))
+            a.Print(jprint(result, False))
             a.Print("\n")
     if opts.cves:
         for cve in opts.cves:
@@ -535,8 +540,6 @@ def main(opts):
 if __name__ == "__main__":
     try:
         opts = parse_args()
-        import requests, json, re
-        import textwrap, fcntl, termios, struct
         main(opts)
     except KeyboardInterrupt:
         print("\nReceived KeyboardInterrupt. Exiting.")
