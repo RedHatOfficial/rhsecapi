@@ -17,10 +17,10 @@
 
 # Modules from standard library
 from __future__ import print_function
-import requests
-import json
 import argparse
-import sys
+from sys import exit, stderr
+
+# Additional modules moved to __main__ to optimize load-time with tab-completion
 
 # Optional module
 try:
@@ -30,14 +30,14 @@ except:
     print("Missing optional python module: argcomplete\n"
           "Install it to enable bash auto-magic tab-completion:\n"
           "  yum/dnf install python-pip; pip install argcomplete\n"
-          "  activate-global-python-argcomplete; (Then restart shell)\n", file=sys.stderr)
+          "  activate-global-python-argcomplete; (Then restart shell)\n", file=stderr)
     haveArgcomplete = False
 
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.3'
-vers['date'] = '2016/10/18'
+vers['version'] = '0.1.4'
+vers['date'] = '2016/10/20'
 defaultFields = "threat_severity,bugzilla,affected_release,package_state"
 
 
@@ -62,7 +62,7 @@ class RedHatSecDataApiClient:
     def __get(self, url):
         url = self.apiurl + url
         if self.progressToStderr:
-            print("Getting '{0}' ...".format(url), file=sys.stderr)
+            print("Getting '{0}' ...".format(url), file=stderr)
         r = requests.get(url)
         r.raise_for_status()
         return url, r.json()
@@ -122,7 +122,7 @@ def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', e
     j = r.json()
     if j.has_key('error'):
         print(json.dumps(j, sort_keys=True, indent=2))
-        sys.exit(1)
+        exit(1)
     pasteUrl = '{0}/{1}'.format(url, j['result']['id'])
     if 'yes' in private and j['result'].has_key('hash'):
         pasteUrl += '/{0}'.format(j['result']['hash'])
@@ -230,6 +230,9 @@ def parse_args():
     g2 = p.add_argument_group(
         'GENERAL OPTIONS')
     g2.add_argument(
+        '-w', '--wrap', metavar='WIDTH', dest='wrapWidth', nargs='?', const=70, default=1, type=int,
+        help="Change wrap-width of long fields (acknowledgement, details, statement) in non-json output from default where wrapping is done with a WIDTH equivalent to (TERMWIDTH - 2); specify WIDTH of 0 to disable wrapping; specify option but ommit WIDTH to set WIDTH to 70")
+    g2.add_argument(
         '-c', '--count', action='store_true',
         help="Print a count of the number of entities found")
     g2.add_argument(
@@ -243,8 +246,8 @@ def parse_args():
         choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
         help="Set the development language for the paste (default: 'text')")
     g2.add_argument(
-        '--paste_user', metavar='NAME',
-        help="Set alphanumeric paste author")
+        '--paste_user', metavar='NAME', default=prog,
+        help="Set alphanumeric paste author (default: '{0}')".format(prog))
     g2.add_argument(
         '--paste_password', metavar='PASSWD',
         help="Set password string to protect paste")
@@ -287,7 +290,7 @@ def parse_args():
         o.searchQuery += '&{0}'.format(o.rawquery)
     if o.showHelp or not (len(o.searchQuery) or o.cves):
         p.print_help()
-        sys.exit()
+        exit()
     return o
 
 
@@ -299,10 +302,18 @@ class RHSecApiParse:
       json
       sys
       requests
+      re
+
+    Conditional:
+      textwrap
+      fcntl
+      termios
+      struct
     """
 
+
     def __init__(self, fields='threat_severity,bugzilla,affected_release,package_state',
-                 printUrls=False, rawOutput=False, pastebin=False, onlyCount=False, verbose=False):
+                 printUrls=False, rawOutput=False, pastebin=False, onlyCount=False, verbose=False, wrapWidth=1):
         """Initialize class settings."""
         self.rhsda = RedHatSecDataApiClient(verbose)
         try:
@@ -311,7 +322,7 @@ class RHSecApiParse:
             else:
                 self.desiredFields = []
         except:
-            print("Error parsing fields\n", file=sys.stderr)
+            print("Error parsing fields\n", file=stderr)
             raise
         self.printUrls = printUrls
         self.rawOutput = rawOutput
@@ -320,6 +331,12 @@ class RHSecApiParse:
             self.Print = self.paste_printer
         self.onlyCount = onlyCount
         self.cveCount = 0
+        if wrapWidth == 1:
+            wrapWidth = self.get_terminal_width() - 2
+        if wrapWidth:
+            self.w = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ")
+        else:
+            self.w = 0
 
     def Print(self, text):
         """Print text to stdout."""
@@ -333,22 +350,26 @@ class RHSecApiParse:
         """Pretty-print jsoninput to stdout."""
         return json.dumps(jsoninput, sort_keys=True, indent=2)
 
+    def get_terminal_width(self):
+        h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
+        return w
+
     def search_query(self, params):
         """Perform a CVE search query based on params."""
         try:
             url, result = self.rhsda.search_cve(params)
         except requests.exceptions.ConnectionError as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
-            sys.exit(1)
+            print("{0}: {1}".format(prog, e), file=stderr)
+            exit(1)
         except requests.exceptions.HTTPError as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
-            sys.exit(1)
+            print("{0}: {1}".format(prog, e), file=stderr)
+            exit(1)
         except requests.exceptions.RequestException as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
-            sys.exit(1)
-        print("Search query results found: {0}".format(len(result)), file=sys.stderr)
+            print("{0}: {1}".format(prog, e), file=stderr)
+            exit(1)
+        print("Search query results found: {0}".format(len(result)), file=stderr)
         if not self.onlyCount:
-            print(file=sys.stderr)
+            print(file=stderr)
         return result   
 
     def _check_field(self, field, jsoninput):
@@ -363,9 +384,12 @@ class RHSecApiParse:
         if isinstance(input, list):
             for i in input:
                 text += i.encode('utf-8').strip()
-                text += " "
+                text += "  "
         else:
             text = input.encode('utf-8').strip()
+        text = re.sub(r"\n+", "  ", text)
+        if self.w:
+            text = "\n" + "\n".join(self.w.wrap(text))
         return text
 
     def print_cve(self, cve):
@@ -373,18 +397,18 @@ class RHSecApiParse:
         try:
             requrl, j = self.rhsda.get_cve(cve)
         except requests.exceptions.ConnectionError as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
-            sys.exit(1)
+            print("{0}: {1}".format(prog, e), file=stderr)
+            exit(1)
         except requests.exceptions.HTTPError as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
+            print("{0}: {1}".format(prog, e), file=stderr)
             if not self.onlyCount:
                 self.Print("{0}\n Not present in Red Hat CVE database\n".format(cve))
                 if cve.startswith("CVE-"):
                     self.Print(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
             return
         except requests.exceptions.RequestException as e:
-            print("{0}: {1}".format(prog, e), file=sys.stderr)
-            sys.exit(1)
+            print("{0}: {1}".format(prog, e), file=stderr)
+            exit(1)
 
         # If --count was used, done
         if self.onlyCount:
@@ -488,7 +512,7 @@ class RHSecApiParse:
 
 
 def main(opts):
-    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose)
+    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose, opts.wrapWidth)
     if len(opts.searchQuery):
         result = a.search_query(opts.searchQuery)
         if opts.extract_search:
@@ -502,8 +526,8 @@ def main(opts):
         for cve in opts.cves:
             a.print_cve(cve)
         if opts.count:
-            print("Valid CVE results found: {0} of {1}".format(a.cveCount, len(opts.cves)), file=sys.stderr)
-            print("Invalid CVE queries: {0} of {1}".format(len(opts.cves)-a.cveCount, len(opts.cves)), file=sys.stderr)
+            print("Valid CVE results found: {0} of {1}".format(a.cveCount, len(opts.cves)), file=stderr)
+            print("Invalid CVE queries: {0} of {1}".format(len(opts.cves)-a.cveCount, len(opts.cves)), file=stderr)
     if opts.pastebin:
         fpaste_it(a.output, opts.paste_lang, opts.paste_user, opts.paste_password, opts.paste_private, opts.paste_expire, opts.paste_project)
 
@@ -511,7 +535,9 @@ def main(opts):
 if __name__ == "__main__":
     try:
         opts = parse_args()
+        import requests, json, re
+        import textwrap, fcntl, termios, struct
         main(opts)
     except KeyboardInterrupt:
         print("\nReceived KeyboardInterrupt. Exiting.")
-        sys.exit()
+        exit()
