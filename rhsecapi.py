@@ -36,8 +36,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.4'
-vers['date'] = '2016/10/20'
+vers['version'] = '0.1.5'
+vers['date'] = '2016/10/21'
 defaultFields = "threat_severity,bugzilla,affected_release,package_state"
 
 
@@ -101,7 +101,7 @@ class RedHatSecDataApiClient:
         return self._retrieve('oval', rhsa)
 
 
-def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', expire=2419200, project=None, url='http://paste.fedoraproject.org'):
+def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', expire=28, project=None, url='http://paste.fedoraproject.org'):
     """Submit a new paste to fedora project pastebin."""
     p = {
         'paste_data': inputdata,
@@ -109,7 +109,7 @@ def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', e
         'api_submit': 'true',
         'mode': 'json',
         'paste_private': private,
-        'paste_expire': str(expire),
+        'paste_expire': str(expire*24*60*60),
         }
     if user:
         p['paste_user'] = user
@@ -179,34 +179,34 @@ def parse_args():
         'PERFORM GENERAL SEARCH QUERY',
         description="Initiate a single search query and print JSON results")
     g0.add_argument(
-        '--before', metavar='YEAR-MM-DD',
+        '--q-before', metavar='YEAR-MM-DD',
         help="Narrow down results to before a certain time period")
     g0.add_argument(
-        '--after', metavar='YEAR-MM-DD',
+        '--q-after', metavar='YEAR-MM-DD',
         help="Narrow down results to after a certain time period")
     g0.add_argument(
-        '--bug', metavar='BZID',
+        '--q-bug', metavar='BZID',
         help="Narrow down results by Bugzilla ID (specify one or more, e.g.: '1326598,1084875')")
     g0.add_argument(
-        '--advisory', metavar='RHSA',
+        '--q-advisory', metavar='RHSA',
         help="Narrow down results by errata advisory (specify one or more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')")
     g0.add_argument(
-        '--severity', metavar='IMPACT', choices=['low', 'moderate', 'important', 'critical'],
+        '--q-severity', metavar='IMPACT', choices=['low', 'moderate', 'important', 'critical'],
         help="Narrow down results by severity rating (specify one of 'low', 'moderate', 'important', or 'critical')")
     g0.add_argument(
-        '--package', metavar='PKG',
+        '--q-package', metavar='PKG',
         help="Narrow down results by package name (e.g.: 'samba' or 'thunderbird')")
     g0.add_argument(
-        '--cwe', metavar='CWEID',
+        '--q-cwe', metavar='CWEID',
         help="Narrow down results by CWE ID (specify one or more, e.g.: '295,300')")
     g0.add_argument(
-        '--cvss_score', metavar='SCORE',
+        '--q-cvss', metavar='SCORE',
         help="Narrow down results by CVSS base score (e.g.: '8.0')")
     g0.add_argument(
-        '--cvss3_score', metavar='SCORE',
+        '--q-cvss3', metavar='SCORE',
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
     g0.add_argument(
-        '--rawquery',
+        '--q-raw', metavar='RAWQUERY',
         help="Narrow down results by RAWQUERY (e.g.: 'per_page=500' or 'a=b&x=y'")
     g00 = p.add_argument_group(
         'PERFORM CVE QUERIES',
@@ -220,14 +220,14 @@ def parse_args():
         'CVE QUERY DISPLAY OPTIONS')
     gg1 = g1.add_mutually_exclusive_group()
     gg1.add_argument(
-        '--fields', default=defaultFields,
+        '-f', '--fields', default=defaultFields,
         help="Comma-separated fields to be displayed (default: {0})".format(defaultFields))
     gg1.add_argument(
-        '-a', '--all', dest='fields', action='store_const',
+        '-a', '--all-fields', dest='fields', action='store_const',
         const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,acknowledgement,details,statement,affected_release,package_state',
         help="Print all supported fields (currently: threat_severity, public_date, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, affected_release, package_state)")
     gg1.add_argument(
-        '-m', '--most', dest='fields', action='store_const',
+        '-m', '--most-fields', dest='fields', action='store_const',
         const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,affected_release,package_state',
         help="Print all fields except the heavy-text ones -- acknowledgement, details, statement")
     gg1.add_argument(
@@ -239,8 +239,8 @@ def parse_args():
     g2 = p.add_argument_group(
         'GENERAL OPTIONS')
     g2.add_argument(
-        '-w', '--wrap', metavar='WIDTH', dest='wrapWidth', nargs='?', const=70, default=1, type=int,
-        help="Change wrap-width of long fields (acknowledgement, details, statement) in non-json output from default where wrapping is done with a WIDTH equivalent to (TERMWIDTH - 2); specify WIDTH of 0 to disable wrapping; specify option but ommit WIDTH to set WIDTH to 70")
+        '-w', '--wrap', metavar='WIDTH', dest='wrapWidth', nargs='?', default=1, const=70, type=int,
+        help="Change wrap-width of long fields (acknowledgement, details, statement) in non-json output (default: wrapping with WIDTH equivalent to TERMWIDTH-2; specify '0' to disable wrapping; WIDTH defaults to '70' if option is used but WIDTH is omitted")
     g2.add_argument(
         '-c', '--count', action='store_true',
         help="Print a count of the number of entities found")
@@ -250,55 +250,69 @@ def parse_args():
     g2.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
+    # g2.add_argument(
+    #     '--p-lang', metavar='LANG', default='text',
+    #     choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
+    #     help="Set the development language for the paste (default: 'text')")
     g2.add_argument(
-        '--paste_lang', metavar='LANG', default='text',
-        choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
-        help="Set the development language for the paste (default: 'text')")
-    g2.add_argument(
-        '--paste_user', metavar='NAME', default=prog,
+        '-U', '--p-user', metavar='NAME', default=prog,
         help="Set alphanumeric paste author (default: '{0}')".format(prog))
+    # g2.add_argument(
+    #     '--p-password', metavar='PASSWD',
+    #     help="Set password string to protect paste")
+    # g2.add_argument(
+    #     '--p-public', dest='p_private', default='yes', action='store_const', const='no',
+    #     help="Set paste to be publicly-discoverable")
     g2.add_argument(
-        '--paste_password', metavar='PASSWD',
-        help="Set password string to protect paste")
+        '-E', '--p-expire', metavar='DAYS', nargs='?', const=2, default=28, type=int,
+        help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '2' if option is used but DAYS is omitted)")
+    # g2.add_argument(
+    #     '--p-project', metavar='PROJECT',
+    #     help="Associate paste with a project")
     g2.add_argument(
-        '--paste_public', dest='paste_private', default='yes', action='store_const', const='no',
-        help="Set paste to be publicly-discoverable")
+        '-h', dest='showUsage', action='store_true',
+        help="Show short usage summary and exit")
     g2.add_argument(
-        '--paste_expire', metavar='SECS', default=2419200, type=int,
-        help="Set time in seconds after which paste will be deleted (default: '2419200', i.e., 28 days; set to '0' to disable expiration)")
-    g2.add_argument(
-        '--paste_project', metavar='PROJECT',
-        help="Associate paste with a project")
-    g2.add_argument(
-        '-h', '--help', dest='showHelp', action='store_true',
+        '--help', dest='showHelp', action='store_true',
         help="Show this help message and exit")
-    o = p.parse_args()
     if haveArgcomplete:
         # Parse and return
         argcomplete.autocomplete(p)
+    o = p.parse_args()
+    if o.showHelp:
+        from tempfile import NamedTemporaryFile
+        from subprocess import call
+        tmp = NamedTemporaryFile(prefix='{0}-help-'.format(prog), suffix='.txt')
+        p.print_help(file=tmp)
+        tmp.flush()
+        call(['less', tmp.name])
+        exit()
     o.searchQuery = ''
-    if o.before:
-        o.searchQuery += '&before={0}'.format(o.before)
-    if o.after:
-        o.searchQuery += '&after={0}'.format(o.after)
-    if o.bug:
-        o.searchQuery += '&bug={0}'.format(o.bug)
-    if o.advisory:
-        o.searchQuery += '&advisory={0}'.format(o.advisory)
-    if o.severity:
-        o.searchQuery += '&severity={0}'.format(o.severity)
-    if o.package:
-        o.searchQuery += '&package={0}'.format(o.package)
-    if o.cwe:
-        o.searchQuery += '&cwe={0}'.format(o.cwe)
-    if o.cvss_score:
-        o.searchQuery += '&cvss_score={0}'.format(o.cvss_score)
-    if o.cvss3_score:
-        o.searchQuery += '&cvss3_score={0}'.format(o.cvss3_score)
-    if o.rawquery:
-        o.searchQuery += '&{0}'.format(o.rawquery)
-    if o.showHelp or not (len(o.searchQuery) or o.cves):
-        p.print_help()
+    if o.q_before:
+        o.searchQuery += '&before={0}'.format(o.q_before)
+    if o.q_after:
+        o.searchQuery += '&after={0}'.format(o.q_after)
+    if o.q_bug:
+        o.searchQuery += '&bug={0}'.format(o.q_bug)
+    if o.q_advisory:
+        o.searchQuery += '&advisory={0}'.format(o.q_advisory)
+    if o.q_severity:
+        o.searchQuery += '&severity={0}'.format(o.q_severity)
+    if o.q_package:
+        o.searchQuery += '&package={0}'.format(o.q_package)
+    if o.q_cwe:
+        o.searchQuery += '&cwe={0}'.format(o.q_cwe)
+    if o.q_cvss:
+        o.searchQuery += '&cvss_score={0}'.format(o.q_cvss)
+    if o.q_cvss3:
+        o.searchQuery += '&cvss3_score={0}'.format(o.q_cvss3)
+    if o.q_raw:
+        o.searchQuery += '&{0}'.format(o.q_raw)
+    if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
+        o.showUsage = True
+    if o.showUsage or not (len(o.searchQuery) or o.cves):
+        p.print_usage()
+        print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
     return o
 
@@ -534,7 +548,13 @@ def main(opts):
             print("Valid CVE results found: {0} of {1}".format(a.cveCount, len(opts.cves)), file=stderr)
             print("Invalid CVE queries: {0} of {1}".format(len(opts.cves)-a.cveCount, len(opts.cves)), file=stderr)
     if opts.pastebin:
-        fpaste_it(a.output, opts.paste_lang, opts.paste_user, opts.paste_password, opts.paste_private, opts.paste_expire, opts.paste_project)
+        opts.p_lang = 'text'
+        if opts.json or not opts.cves:
+            opts.p_lang = 'Python'
+        opts.p_password = None
+        opts.p_private = 'yes'
+        opts.p_project = None
+        fpaste_it(a.output, opts.p_lang, opts.p_user, opts.p_password, opts.p_private, opts.p_expire, opts.p_project)
 
 
 if __name__ == "__main__":
