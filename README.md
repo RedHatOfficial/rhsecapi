@@ -71,13 +71,12 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
 
 ```
 $ rhsecapi --
---advisory        --cvss_score      --package         --paste_user
---after           --cwe             --pastebin        --rawquery
---all             --extract-search  --paste_expire    --severity
---before          --fields          --paste_lang      --urls
---bug             --help            --paste_password  --verbose
---count           --json            --paste_project   
---cvss3_score     --most            --paste_public    
+-a                -f                -m                --q-advisory      --q-cwe           --urls
+--all-fields      --fields          --most-fields     --q-after         --q-package       -v
+-c                -h                -p                --q-before        --q-raw           --verbose
+--count           --help            --pastebin        --q-bug           --q-severity      -w
+-E                -j                --p-expire        --q-cvss          -u                --wrap
+--extract-search  --json            --p-user          --q-cvss3         -U                -x
 ```
 
 ### Field display
@@ -97,7 +96,7 @@ CVE-2016-5387 (https://access.redhat.com/security/cve/CVE-2016-5387)
 ```
 
 ```
-$ rhsecapi CVE-2016-5387 --all
+$ rhsecapi CVE-2016-5387 --all-fields
 CVE-2016-5387
   IMPACT:  Important
   PUBLIC_DATE:  2016-07-18T00:00:00
@@ -144,7 +143,7 @@ CVE-2016-5387
 ### Search queries
 
 ```
-$ rhsecapi --package rhev-hypervisor6 --after 2014-12-01 --severity critical
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical
 Search query results found: 1
 
 [
@@ -181,12 +180,12 @@ Search query results found: 1
 ```
 
 ```
-$ rhsecapi --package rhev-hypervisor6 --after 2014-10-01 --count
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --count
 Search query results found: 6
 ```
 
 ```
-$ rhsecapi --package rhev-hypervisor6 --after 2014-10-01 --extract-search --fields=''
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --extract-search --fields=''
 Search query results found: 6
 
 CVE-2015-3456
@@ -201,13 +200,12 @@ CVE-2014-3567
 
 ```
 $ rhsecapi -h
-usage: rhsecapi [--before YEAR-MM-DD] [--after YEAR-MM-DD] [--bug BZID]
-                [--advisory RHSA] [--severity IMPACT] [--package PKG]
-                [--cwe CWEID] [--cvss_score SCORE] [--cvss3_score SCORE]
-                [--rawquery RAWQUERY] [-x] [--fields FIELDS | -a | -m | -j]
-                [-u] [-w [WIDTH]] [-c] [-v] [-p] [--paste_lang LANG]
-                [--paste_user NAME] [--paste_password PASSWD] [--paste_public]
-                [--paste_expire SECS] [--paste_project PROJECT] [-h]
+usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
+                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
+                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE]
+                [--q-raw RAWQUERY] [-x] [-f FIELDS | -a | -m | -j] [-u]
+                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
+                [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -217,21 +215,22 @@ Docs: https://access.redhat.com/documentation/en/red-hat-security-data-api/
 PERFORM GENERAL SEARCH QUERY:
   Initiate a single search query and print JSON results
 
-  --before YEAR-MM-DD   Narrow down results to before a certain time period
-  --after YEAR-MM-DD    Narrow down results to after a certain time period
-  --bug BZID            Narrow down results by Bugzilla ID (specify one or
+  --q-before YEAR-MM-DD
+                        Narrow down results to before a certain time period
+  --q-after YEAR-MM-DD  Narrow down results to after a certain time period
+  --q-bug BZID          Narrow down results by Bugzilla ID (specify one or
                         more, e.g.: '1326598,1084875')
-  --advisory RHSA       Narrow down results by errata advisory (specify one or
+  --q-advisory RHSA     Narrow down results by errata advisory (specify one or
                         more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')
-  --severity IMPACT     Narrow down results by severity rating (specify one of
+  --q-severity IMPACT   Narrow down results by severity rating (specify one of
                         'low', 'moderate', 'important', or 'critical')
-  --package PKG         Narrow down results by package name (e.g.: 'samba' or
+  --q-package PKG       Narrow down results by package name (e.g.: 'samba' or
                         'thunderbird')
-  --cwe CWEID           Narrow down results by CWE ID (specify one or more,
+  --q-cwe CWEID         Narrow down results by CWE ID (specify one or more,
                         e.g.: '295,300')
-  --cvss_score SCORE    Narrow down results by CVSS base score (e.g.: '8.0')
-  --cvss3_score SCORE   Narrow down results by CVSSv3 base score (e.g.: '5.1')
-  --rawquery RAWQUERY   Narrow down results by RAWQUERY (e.g.: 'per_page=500'
+  --q-cvss SCORE        Narrow down results by CVSS base score (e.g.: '8.0')
+  --q-cvss3 SCORE       Narrow down results by CVSSv3 base score (e.g.: '5.1')
+  --q-raw RAWQUERY      Narrow down results by RAWQUERY (e.g.: 'per_page=500'
                         or 'a=b&x=y'
 
 PERFORM CVE QUERIES:
@@ -245,43 +244,38 @@ PERFORM CVE QUERIES:
                         JSON result of search query)
 
 CVE QUERY DISPLAY OPTIONS:
-  --fields FIELDS       Comma-separated fields to be displayed (default: threa
+  -f, --fields FIELDS   Comma-separated fields to be displayed (default: threa
                         t_severity,bugzilla,affected_release,package_state)
-  -a, --all             Print all supported fields (currently:
+  -a, --all-fields      Print all supported fields (currently:
                         threat_severity, public_date, cwe, cvss, cvss3,
                         bugzilla, acknowledgement, details, statement,
                         affected_release, package_state)
-  -m, --most            Print all fields except the heavy-text ones --
+  -m, --most-fields     Print all fields except the heavy-text ones --
                         acknowledgement, details, statement
   -j, --json            Print full & raw JSON output
   -u, --urls            Print URLs for all relevant fields
 
 GENERAL OPTIONS:
   -w, --wrap [WIDTH]    Change wrap-width of long fields (acknowledgement,
-                        details, statement) in non-json output from default
-                        where wrapping is done with a WIDTH equivalent to
-                        (TERMWIDTH - 2); specify WIDTH of 0 to disable
-                        wrapping; specify option but ommit WIDTH to set WIDTH
-                        to 70
+                        details, statement) in non-json output (default:
+                        wrapping with WIDTH equivalent to TERMWIDTH-2; specify
+                        '0' to disable wrapping; WIDTH defaults to '70' if
+                        option is used but WIDTH is omitted
   -c, --count           Print a count of the number of entities found
   -v, --verbose         Print API urls to stderr
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
-  --paste_lang LANG     Set the development language for the paste (default:
-                        'text')
-  --paste_user NAME     Set alphanumeric paste author (default: 'rhsecapi')
-  --paste_password PASSWD
-                        Set password string to protect paste
-  --paste_public        Set paste to be publicly-discoverable
-  --paste_expire SECS   Set time in seconds after which paste will be deleted
-                        (default: '2419200', i.e., 28 days; set to '0' to
-                        disable expiration)
-  --paste_project PROJECT
-                        Associate paste with a project
-  -h, --help            Show this help message and exit
+  -U, --p-user NAME     Set alphanumeric paste author (default: 'rhsecapi')
+  -E, --p-expire [DAYS]
+                        Set time in days after which paste will be deleted
+                        (defaults to '28'; specify '0' to disable expiration;
+                        DAYS defaults to '2' if option is used but DAYS is
+                        omitted)
+  -h                    Show short usage summary and exit
+  --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.1.4 last mod 2016/10/20
+  rhsecapi v0.1.5 last mod 2016/10/21
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
