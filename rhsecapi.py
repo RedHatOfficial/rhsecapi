@@ -36,9 +36,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.5'
-vers['date'] = '2016/10/21'
-defaultFields = "threat_severity,bugzilla,affected_release,package_state"
+vers['version'] = '0.1.6'
+vers['date'] = '2016/10/24'
 
 
 class RedHatSecDataApiClient:
@@ -219,17 +218,21 @@ def parse_args():
     g1 = p.add_argument_group(
         'CVE QUERY DISPLAY OPTIONS')
     gg1 = g1.add_mutually_exclusive_group()
+    # Supported fields
+    allFields     = ['threat_severity', 'public_date', 'iava', 'cwe', 'cvss', 'cvss3', 'bugzilla', 'acknowledgement', 'details', 'statement', 'affected_release', 'package_state']
+    mostFields    = list(allFields); mostFields.remove('acknowledgement'); mostFields.remove('details'); mostFields.remove('statement')
+    defaultFields = ['threat_severity', 'bugzilla', 'affected_release', 'package_state']
     gg1.add_argument(
-        '-f', '--fields', default=defaultFields,
-        help="Comma-separated fields to be displayed (default: {0})".format(defaultFields))
+        '-f', '--fields', default=','.join(defaultFields),
+        help="Comma-separated fields to be displayed (default: {0})".format(", ".join(defaultFields)))
     gg1.add_argument(
         '-a', '--all-fields', dest='fields', action='store_const',
-        const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,acknowledgement,details,statement,affected_release,package_state',
-        help="Print all supported fields (currently: threat_severity, public_date, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, affected_release, package_state)")
+        const=','.join(allFields),
+        help="Print all supported fields (currently: {0})".format(", ".join(allFields)))
     gg1.add_argument(
         '-m', '--most-fields', dest='fields', action='store_const',
-        const='threat_severity,public_date,cwe,cvss,cvss3,bugzilla,affected_release,package_state',
-        help="Print all fields except the heavy-text ones -- acknowledgement, details, statement")
+        const=','.join(mostFields),
+        help="Print all fields mentioned above except the heavy-text ones -- acknowledgement, details, statement")
     gg1.add_argument(
         '-j', '--json', action='store_true',
         help="Print full & raw JSON output")
@@ -460,6 +463,12 @@ class RHSecApiParse:
 
         if self._check_field('public_date', j):
             self.Print("  PUBLIC_DATE:  {0}\n".format(j['public_date']))
+
+        if self._check_field('iava', j):
+            url = ""
+            if self.printUrls:
+                url = " (https://access.redhat.com/labs/iavmmapper/api/iava/{0})".format(j['iava'])
+            self.Print("  IAVA:  {0}{1}\n".format(j['iava'], url))
 
         if self._check_field('cwe', j):
             url = ""
