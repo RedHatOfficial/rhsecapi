@@ -244,14 +244,15 @@ PERFORM CVE QUERIES:
                         JSON result of search query)
 
 CVE QUERY DISPLAY OPTIONS:
-  -f, --fields FIELDS   Comma-separated fields to be displayed (default: threa
-                        t_severity,bugzilla,affected_release,package_state)
+  -f, --fields FIELDS   Comma-separated fields to be displayed (default:
+                        threat_severity, bugzilla, affected_release,
+                        package_state)
   -a, --all-fields      Print all supported fields (currently:
-                        threat_severity, public_date, cwe, cvss, cvss3,
+                        threat_severity, public_date, iava, cwe, cvss, cvss3,
                         bugzilla, acknowledgement, details, statement,
                         affected_release, package_state)
-  -m, --most-fields     Print all fields except the heavy-text ones --
-                        acknowledgement, details, statement
+  -m, --most-fields     Print all fields mentioned above except the heavy-text
+                        ones -- acknowledgement, details, statement
   -j, --json            Print full & raw JSON output
   -u, --urls            Print URLs for all relevant fields
 
@@ -275,7 +276,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.1.5 last mod 2016/10/21
+  rhsecapi v0.1.6 last mod 2016/10/24
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
