@@ -36,7 +36,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.7'
+vers['version'] = '0.1.8'
 vers['date'] = '2016/10/24'
 # Supported CVE fields
 allFields = ['threat_severity',
@@ -67,6 +67,7 @@ for f in notMostFields:
     mostFields.remove(f)
 # Simple set of default fields
 defaultFields = ['threat_severity',
+                 'public_date',
                  'bugzilla',
                  'affected_release',
                  'package_state',
@@ -499,7 +500,7 @@ class RHSecApiParse:
             self.Print("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
 
         if self._check_field('public_date', j):
-            self.Print("  PUBLIC_DATE:  {0}\n".format(j['public_date']))
+            self.Print("  DATE:  {0}\n".format(j['public_date'].split("T")[0]))
 
         if self._check_field('iava', j):
             url = ""
