@@ -19,6 +19,7 @@ CVE-2015-4642
 
 CVE-2010-5298
   IMPACT:  Moderate
+  DATE:  2014-04-08
   BUGZILLA:  1087195
   AFFECTED_RELEASE (ERRATA)
    Red Hat Enterprise Linux 6 [openssl-1.0.1e-16.el6_5.14]: RHSA-2014:0625
@@ -49,12 +50,13 @@ CVE-2015-4642
 
 CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
   IMPACT:  Moderate (https://access.redhat.com/security/updates/classification)
+  DATE:  2014-04-08
   BUGZILLA:  https://bugzilla.redhat.com/show_bug.cgi?id=1087195
-  AFFECTED_RELEASE (ERRATA)
+  AFFECTED_RELEASE (ERRATA):
    Red Hat Enterprise Linux 6 [openssl-1.0.1e-16.el6_5.14]: https://access.redhat.com/errata/RHSA-2014:0625
    Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-34.el7_0.3]: https://access.redhat.com/errata/RHSA-2014:0679
    Red Hat Storage Server 2.1 [openssl-1.0.1e-16.el6_5.14]: https://access.redhat.com/errata/RHSA-2014:0628
-  PACKAGE_STATE
+  PACKAGE_STATE:
    Not affected: Red Hat JBoss EAP 5 [openssl]
    Not affected: Red Hat JBoss EAP 6 [openssl]
    Not affected: Red Hat JBoss EWS 1 [openssl]
@@ -82,27 +84,74 @@ $ rhsecapi --
 ### Field display
 
 ```
-$ rhsecapi CVE-2016-5387 --fields cvss,cvss3 
+$ rhsecapi CVE-2016-5387 --fields cvss,cvss3
 CVE-2016-5387
-  CVSS:  5.0 [AV:N/AC:L/Au:N/C:N/I:P/A:N]
-  CVSS3:  5.0 [CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N]
+  CVSS:  5.0 (AV:N/AC:L/Au:N/C:N/I:P/A:N)
+  CVSS3:  5.0 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N)
 ```
 
 ```
-$ rhsecapi CVE-2016-5387 --fields cvss,cvss3 --urls
-CVE-2016-5387 (https://access.redhat.com/security/cve/CVE-2016-5387)
-  CVSS:  5.0 [http://nvd.nist.gov/cvss.cfm?version=2&vector=(AV:N/AC:L/Au:N/C:N/I:P/A:N)]
-  CVSS3:  5.0 [https://www.first.org/cvss/calculator/3.0#CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N]
+$ rhsecapi --fields +cvss,cwe CVE-2015-6525 --urls
+CVE-2015-6525 (https://access.redhat.com/security/cve/CVE-2015-6525)
+  IMPACT:  Moderate (https://access.redhat.com/security/updates/classification)
+  DATE:  2015-08-24
+  CWE:  CWE-190->(CWE-122|CWE-835)
+   http://cwe.mitre.org/data/definitions/190.html
+   http://cwe.mitre.org/data/definitions/122.html
+   http://cwe.mitre.org/data/definitions/835.html
+  CVSS:  5.1 (http://nvd.nist.gov/cvss.cfm?version=2&vector=AV:N/AC:H/Au:N/C:P/I:P/A:P)
+  BUGZILLA:  https://bugzilla.redhat.com/show_bug.cgi?id=1256797
+  PACKAGE_STATE:
+   Not affected: Red Hat Enterprise Linux 4 [nfs-utils]
+   Not affected: Red Hat Enterprise Linux 4 [openmpi]
+   Not affected: Red Hat Enterprise Linux 5 [libevent]
+   Not affected: Red Hat Enterprise Linux 5 [openmpi]
+   Will not fix: Red Hat Enterprise Linux 5 [firefox]
+   Will not fix: Red Hat Enterprise Linux 5 [thunderbird]
+   Not affected: Red Hat Enterprise Linux 6 [libevent]
+   Not affected: Red Hat Enterprise Linux 6 [openmpi]
+   Will not fix: Red Hat Enterprise Linux 6 [chromium-browser]
+   Will not fix: Red Hat Enterprise Linux 6 [firefox]
+   Will not fix: Red Hat Enterprise Linux 6 [thunderbird]
+   Fix deferred: Red Hat Enterprise Linux 7 [libevent]
+   Not affected: Red Hat Enterprise Linux 7 [openmpi]
+   Will not fix: Red Hat Enterprise Linux 7 [firefox]
+   Will not fix: Red Hat Enterprise Linux 7 [thunderbird]
+```
+
+```
+$ rhsecapi CVE-2010-5298 -f +iava,cvss
+CVE-2010-5298
+  IMPACT:  Moderate
+  DATE:  2014-04-08
+  IAVA:  2014-A-0100, 2014-B-0077, 2014-B-0088, 2014-B-0089, 2014-B-0091, 2014-B-0092, 2014-B-0097, 2014-B-0101, 2014-B-0102
+  CVSS:  4.3 (AV:N/AC:M/Au:N/C:N/I:N/A:P)
+  BUGZILLA:  1087195
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 6 [openssl-1.0.1e-16.el6_5.14]: RHSA-2014:0625
+   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-34.el7_0.3]: RHSA-2014:0679
+   Red Hat Storage Server 2.1 [openssl-1.0.1e-16.el6_5.14]: RHSA-2014:0628
+  PACKAGE_STATE:
+   Not affected: Red Hat JBoss EAP 5 [openssl]
+   Not affected: Red Hat JBoss EAP 6 [openssl]
+   Not affected: Red Hat JBoss EWS 1 [openssl]
+   Not affected: Red Hat JBoss EWS 2 [openssl]
+   Not affected: RHEV-M for Servers [mingw-virt-viewer]
+   Not affected: Red Hat Enterprise Linux 5 [openssl097a]
+   Not affected: Red Hat Enterprise Linux 5 [openssl]
+   Not affected: Red Hat Enterprise Linux 6 [guest-images]
+   Not affected: Red Hat Enterprise Linux 6 [openssl098e]
+   Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
 ```
 $ rhsecapi CVE-2016-5387 --all-fields
 CVE-2016-5387
   IMPACT:  Important
-  PUBLIC_DATE:  2016-07-18T00:00:00
+  DATE:  2016-07-18
   CWE:  CWE-20
-  CVSS:  5.0 [AV:N/AC:L/Au:N/C:N/I:P/A:N]
-  CVSS3:  5.0 [CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N]
+  CVSS:  5.0 (AV:N/AC:L/Au:N/C:N/I:P/A:N)
+  CVSS3:  5.0 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N)
   BUGZILLA:  1353755
   ACKNOWLEDGEMENT:  
    Red Hat would like to thank Scott Geary (VendHQ) for reporting this issue.
@@ -112,14 +161,19 @@ CVE-2016-5387
    HTTP_PROXY environment variable, which might allow remote attackers to redirect an
    application's outbound HTTP traffic to an arbitrary proxy server via a crafted Proxy
    header in an HTTP request, aka an "httpoxy" issue.  NOTE: the vendor states "This
-   mitigation has been assigned the identifier CVE-2016-5387"; in other words, this is
-   not a CVE ID for a vulnerability.  It was discovered that httpd used the value of the
-   Proxy header from HTTP requests to initialize the HTTP_PROXY environment variable for
-   CGI scripts, which in turn was incorrectly used by certain HTTP client
-   implementations to configure the proxy for outgoing HTTP requests. A remote attacker
-   could possibly use this flaw to redirect HTTP requests performed by a CGI script to
-   an attacker-controlled proxy via a malicious HTTP request.
-  AFFECTED_RELEASE (ERRATA)
+   mitigation has been assigned the identifier CVE-2016-5387"; in other words, this is not
+   a CVE ID for a vulnerability.  It was discovered that httpd used the value of the Proxy
+   header from HTTP requests to initialize the HTTP_PROXY environment variable for CGI
+   scripts, which in turn was incorrectly used by certain HTTP client implementations to
+   configure the proxy for outgoing HTTP requests. A remote attacker could possibly use
+   this flaw to redirect HTTP requests performed by a CGI script to an attacker-controlled
+   proxy via a malicious HTTP request.
+  UPSTREAM_FIX:  httpd 2.4.24, httpd 2.2.32
+  REFERENCES:  
+   https://access.redhat.com/security/vulnerabilities/httpoxy
+   https://httpoxy.org/
+   https://www.apache.org/security/asf-httpoxy-response.txt
+  AFFECTED_RELEASE (ERRATA):
    Red Hat Enterprise Linux 5 [httpd-2.2.3-92.el5_11]: RHSA-2016:1421
    Red Hat Enterprise Linux 6 [httpd-2.2.15-54.el6_8]: RHSA-2016:1421
    Red Hat Enterprise Linux 7 [httpd-2.4.6-40.el7_2.4]: RHSA-2016:1422
@@ -134,7 +188,7 @@ CVE-2016-5387
    Red Hat JBoss Web Server 3.0 for RHEL 7: RHSA-2016:1635
    Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: RHSA-2016:1420
    Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: RHSA-2016:1420
-  PACKAGE_STATE
+  PACKAGE_STATE:
    Affected: Red Hat JBoss EAP 6 [httpd22]
    Not affected: Red Hat JBoss EAP 7 [httpd22]
    Will not fix: Red Hat JBoss EWS 1 [httpd]
