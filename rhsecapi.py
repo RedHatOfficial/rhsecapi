@@ -503,10 +503,16 @@ class RHSecApiParse:
             self.Print("  DATE:  {0}\n".format(j['public_date'].split("T")[0]))
 
         if self._check_field('iava', j):
-            url = ""
+            self.Print("  IAVA:")
             if self.printUrls:
-                url = " (https://access.redhat.com/labs/iavmmapper/api/iava/{0})".format(j['iava'])
-            self.Print("  IAVA:  {0}{1}\n".format(j['iava'], url))
+                self.Print("\n")
+                iavas = j['iava'].split(",")
+                for i in iavas:
+                    i = i.strip()
+                    url = " (https://access.redhat.com/labs/iavmmapper/api/iava/{0})".format(i)
+                    self.Print("   {0}{1}\n".format(i, url))
+            else:
+                self.Print("  {0}\n".format(j['iava']))
 
         if self._check_field('cwe', j):
             url = ""
@@ -553,7 +559,7 @@ class RHSecApiParse:
             self.Print("  UPSTREAM_FIX:  {0}\n".format(j['upstream_fix']))
 
         if self._check_field('references', j):
-            self.Print("  REFERENCES:  {0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
+            self.Print("  REFERENCES:{0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
 
         if self._check_field('affected_release', j):
             self.Print("  AFFECTED_RELEASE (ERRATA)\n")
