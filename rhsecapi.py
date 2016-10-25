@@ -36,8 +36,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.8'
-vers['date'] = '2016/10/24'
+vers['version'] = '0.1.9'
+vers['date'] = '2016/10/25'
 # Supported CVE fields
 allFields = ['threat_severity',
              'public_date',
@@ -72,6 +72,14 @@ defaultFields = ['threat_severity',
                  'affected_release',
                  'package_state',
                  ]
+
+
+def err_print_support_urls(msg=None):
+    """Print error + support urls."""
+    if msg:
+        print(msg, file=stderr)
+    print("For help, open an issue at http://github.com/ryran/redhat-security-data-api\n"
+          "Or post a comment at https://access.redhat.com/discussions/2713931\n", file=stderr)
 
 
 class RedHatSecDataApiClient:
@@ -370,18 +378,14 @@ class RHSecApiParse:
     """
 
 
-    def __init__(self, fields='threat_severity,bugzilla,affected_release,package_state',
+    def __init__(self, fields='threat_severity,public_date,bugzilla,affected_release,package_state',
                  printUrls=False, rawOutput=False, pastebin=False, onlyCount=False, verbose=False, wrapWidth=1):
         """Initialize class settings."""
         self.rhsda = RedHatSecDataApiClient(verbose)
-        try:
-            if len(fields):
-                self.desiredFields = fields.split(",")
-            else:
-                self.desiredFields = []
-        except:
-            print("Error parsing fields\n", file=stderr)
-            raise
+        if len(fields):
+            self.desiredFields = fields.split(",")
+        else:
+            self.desiredFields = []
         self.printUrls = printUrls
         self.rawOutput = rawOutput
         self.output = ""
@@ -414,12 +418,15 @@ class RHSecApiParse:
             url, result = self.rhsda.search_cve(params)
         except requests.exceptions.ConnectionError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
+            err_print_support_urls()
             exit(1)
         except requests.exceptions.HTTPError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
+            err_print_support_urls()
             exit(1)
         except requests.exceptions.RequestException as e:
             print("{0}: {1}".format(prog, e), file=stderr)
+            err_print_support_urls()
             exit(1)
         print("Search query results found: {0}".format(len(result)), file=stderr)
         if not self.onlyCount:
@@ -458,6 +465,7 @@ class RHSecApiParse:
             requrl, j = self.rhsda.get_cve(cve)
         except requests.exceptions.ConnectionError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
+            err_print_support_urls()
             exit(1)
         except requests.exceptions.HTTPError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
@@ -468,6 +476,7 @@ class RHSecApiParse:
             return
         except requests.exceptions.RequestException as e:
             print("{0}: {1}".format(prog, e), file=stderr)
+            err_print_support_urls()
             exit(1)
 
         # If --count was used, done
@@ -633,3 +642,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nReceived KeyboardInterrupt. Exiting.")
         exit()
+else:
+    a = RedHatSecDataApiClient(True)
