@@ -339,8 +339,7 @@ VERSION:
 ```
 $ python
 >>> import rhsecapi as r
->>> a = r.RedHatSecDataApiClient()
->>> help(a)
+>>> help(r.a)
 Help on instance of RedHatSecDataApiClient in module rhsecapi:
 
 class RedHatSecDataApiClient
@@ -370,9 +369,9 @@ class RedHatSecDataApiClient
  |  
  |  search_oval(self, params=None)
 (END)
->>> a.search_oval("cve=CVE-2016-5387")
+>>> r.a.search_oval("cve=CVE-2016-5387")
 ('https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387', [{u'severity': u'important', u'bugzillas': [u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1421', u'CVEs': [u'CVE-2016-5387']}, {u'severity': u'important', u'bugzillas': [u'1347648', u'1353269', u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1422', u'CVEs': [u'CVE-2016-5387']}])
->>> r.jprint(a.search_oval("cve=CVE-2016-5387"))
+>>> r.jprint(r.a.search_oval("cve=CVE-2016-5387"))
 [
   "https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387", 
   [
