@@ -515,22 +515,29 @@ class RHSecApiParse:
                 self.Print("  {0}\n".format(j['iava']))
 
         if self._check_field('cwe', j):
-            url = ""
+            self.Print("  CWE:  {0}".format(j['cwe']))
             if self.printUrls:
-                url = " (http://cwe.mitre.org/data/definitions/{0}.html)".format(j['cwe'].lstrip("CWE-"))
-            self.Print("  CWE:  {0}{1}\n".format(j['cwe'], url))
+                cwes = re.findall("CWE-[0-9]+", j['cwe'])
+                if len(cwes) == 1:
+                    self.Print(" (http://cwe.mitre.org/data/definitions/{0}.html)\n".format(cwes[0].lstrip("CWE-")))
+                else:
+                    self.Print("\n")
+                    for c in cwes:
+                        self.Print("   http://cwe.mitre.org/data/definitions/{0}.html\n".format(c.lstrip("CWE-")))
+            else:
+                self.Print("\n")
 
         if self._check_field('cvss', j):
             cvss_scoring_vector = j['cvss']['cvss_scoring_vector']
             if self.printUrls:
-                cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector=({0})".format(cvss_scoring_vector)
-            self.Print("  CVSS:  {0} [{1}]\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
+                cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector={0}".format(cvss_scoring_vector)
+            self.Print("  CVSS:  {0} ({1})\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
 
         if self._check_field('cvss3', j):
             cvss3_scoring_vector = j['cvss3']['cvss3_scoring_vector']
             if self.printUrls:
                 cvss3_scoring_vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(cvss3_scoring_vector)
-            self.Print("  CVSS3:  {0} [{1}]\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
+            self.Print("  CVSS3:  {0} ({1})\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
 
         if 'bugzilla' in self.desiredFields:
             if j.has_key('bugzilla'):
@@ -562,7 +569,7 @@ class RHSecApiParse:
             self.Print("  REFERENCES:{0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
 
         if self._check_field('affected_release', j):
-            self.Print("  AFFECTED_RELEASE (ERRATA)\n")
+            self.Print("  AFFECTED_RELEASE (ERRATA):\n")
             affected_release = j['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
@@ -577,7 +584,7 @@ class RHSecApiParse:
                 self.Print("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
 
         if self._check_field('package_state', j):
-            self.Print("  PACKAGE_STATE\n")
+            self.Print("  PACKAGE_STATE:\n")
             package_state = j['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
