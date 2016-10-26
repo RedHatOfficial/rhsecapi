@@ -36,8 +36,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.1.9'
-vers['date'] = '2016/10/25'
+vers['version'] = '0.2.0'
+vers['date'] = '2016/10/26'
 # Supported CVE fields
 allFields = ['threat_severity',
              'public_date',
@@ -215,105 +215,112 @@ def parse_args():
         add_help=False,
         epilog=epilog,
         formatter_class=fmt)
-    # Add args
-    g0 = p.add_argument_group(
-        'PERFORM GENERAL SEARCH QUERY',
-        description="Initiate a single search query and print JSON results")
-    g0.add_argument(
+    # New group
+    g_listByAttr = p.add_argument_group(
+        'FIND CVES BY ATTRIBUTE')
+    g_listByAttr.add_argument(
         '--q-before', metavar='YEAR-MM-DD',
         help="Narrow down results to before a certain time period")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-after', metavar='YEAR-MM-DD',
         help="Narrow down results to after a certain time period")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-bug', metavar='BZID',
         help="Narrow down results by Bugzilla ID (specify one or more, e.g.: '1326598,1084875')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-advisory', metavar='RHSA',
         help="Narrow down results by errata advisory (specify one or more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-severity', metavar='IMPACT', choices=['low', 'moderate', 'important', 'critical'],
         help="Narrow down results by severity rating (specify one of 'low', 'moderate', 'important', or 'critical')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-package', metavar='PKG',
         help="Narrow down results by package name (e.g.: 'samba' or 'thunderbird')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-cwe', metavar='CWEID',
         help="Narrow down results by CWE ID (specify one or more, e.g.: '295,300')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-cvss', metavar='SCORE',
         help="Narrow down results by CVSS base score (e.g.: '8.0')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-cvss3', metavar='SCORE',
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
-    g0.add_argument(
+    g_listByAttr.add_argument(
         '--q-raw', metavar='RAWQUERY',
         help="Narrow down results by RAWQUERY (e.g.: 'per_page=500' or 'a=b&x=y'")
-    g00 = p.add_argument_group(
-        'PERFORM CVE QUERIES',
-        description="Search by CVE in addition to or instead above search query")
-    g00.add_argument('cves', metavar='CVE', nargs='*',
-        help="Query a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
-    g00.add_argument(
+    # New group
+    g_listByIava = p.add_argument_group(
+        'FIND CVES BY IAVA')
+    g_listByIava.add_argument(
+        '--q-iava', metavar='IAVA',
+        help="Narrow down results by IAVA number (e.g.: '2016-A-0293'); note however that this feature is not provided by the Red Hat Security Data API and thus: (1) it requires login to the Red Hat Customer Portal and (2) it cannot be used in concert with any of the above search parameters")
+    # New group
+    g_getCve = p.add_argument_group(
+        'QUERY SPECIFIC CVES')
+    g_getCve.add_argument(
         '-x', '--extract-search', action='store_true',
-        help="Determine what CVEs to query by extracting them from general search query as initiated by at least one of the GENERAL SEARCH QUERY options (suppresses usual JSON result of search query)")
-    g1 = p.add_argument_group(
-        'CVE QUERY DISPLAY OPTIONS')
-    gg1 = g1.add_mutually_exclusive_group()
-    gg1.add_argument(
+        help="Determine what CVEs to query by extracting them from above search query (as initiated by at least one of the --q-xxx options); this option suppresses usual JSON result of search queries")
+    g_getCve.add_argument('cves', metavar='CVE', nargs='*',
+        help="Retrieve a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
+    # New group
+    g_cveDisplay = p.add_argument_group(
+        'CVE DISPLAY OPTIONS')
+    g_cveDisplay0 = g_cveDisplay.add_mutually_exclusive_group()
+    g_cveDisplay0.add_argument(
         '-f', '--fields', metavar='+FIELDS', default=','.join(defaultFields),
         help="Comma-separated fields to be displayed (default: {0}); optionally prepend with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3')".format(", ".join(defaultFields)))
-    gg1.add_argument(
+    g_cveDisplay0.add_argument(
         '-a', '--all-fields', dest='fields', action='store_const',
         const=','.join(allFields),
         help="Print all supported fields (currently: {0})".format(", ".join(allFields)))
-    gg1.add_argument(
+    g_cveDisplay0.add_argument(
         '-m', '--most-fields', dest='fields', action='store_const',
         const=','.join(mostFields),
         help="Print all fields mentioned above except the heavy-text ones -- (excluding: {0})".format(", ".join(notMostFields)))
-    gg1.add_argument(
+    g_cveDisplay.add_argument(
         '-j', '--json', action='store_true',
         help="Print full & raw JSON output")
-    g1.add_argument(
+    g_cveDisplay.add_argument(
         '-u', '--urls', dest='printUrls', action='store_true',
         help="Print URLs for all relevant fields")
-    g2 = p.add_argument_group(
+    # New group
+    g_general = p.add_argument_group(
         'GENERAL OPTIONS')
-    g2.add_argument(
+    g_general.add_argument(
         '-w', '--wrap', metavar='WIDTH', dest='wrapWidth', nargs='?', default=1, const=70, type=int,
         help="Change wrap-width of long fields (acknowledgement, details, statement) in non-json output (default: wrapping with WIDTH equivalent to TERMWIDTH-2; specify '0' to disable wrapping; WIDTH defaults to '70' if option is used but WIDTH is omitted")
-    g2.add_argument(
+    g_general.add_argument(
         '-c', '--count', action='store_true',
         help="Print a count of the number of entities found")
-    g2.add_argument(
+    g_general.add_argument(
         '-v', '--verbose', action='store_true',
         help="Print API urls to stderr")
-    g2.add_argument(
+    g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
-    # g2.add_argument(
+    # g_general.add_argument(
     #     '--p-lang', metavar='LANG', default='text',
     #     choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
     #     help="Set the development language for the paste (default: 'text')")
-    g2.add_argument(
+    g_general.add_argument(
         '-U', '--p-user', metavar='NAME', default=prog,
         help="Set alphanumeric paste author (default: '{0}')".format(prog))
-    # g2.add_argument(
+    # g_general.add_argument(
     #     '--p-password', metavar='PASSWD',
     #     help="Set password string to protect paste")
-    # g2.add_argument(
+    # g_general.add_argument(
     #     '--p-public', dest='p_private', default='yes', action='store_const', const='no',
     #     help="Set paste to be publicly-discoverable")
-    g2.add_argument(
+    g_general.add_argument(
         '-E', '--p-expire', metavar='DAYS', nargs='?', const=2, default=28, type=int,
         help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '2' if option is used but DAYS is omitted)")
-    # g2.add_argument(
+    # g_general.add_argument(
     #     '--p-project', metavar='PROJECT',
     #     help="Associate paste with a project")
-    g2.add_argument(
+    g_general.add_argument(
         '-h', dest='showUsage', action='store_true',
         help="Show short usage summary and exit")
-    g2.add_argument(
+    g_general.add_argument(
         '--help', dest='showHelp', action='store_true',
         help="Show this help message and exit")
     if haveArgcomplete:
@@ -349,9 +356,12 @@ def parse_args():
         o.searchQuery += '&cvss3_score={0}'.format(o.q_cvss3)
     if o.q_raw:
         o.searchQuery += '&{0}'.format(o.q_raw)
+    if o.q_iava and len(o.searchQuery):
+        print("{0}: The --q-iava option is not compatible with other --q-xxx options; it can only be used alone".format(prog), file=stderr)
+        exit(1)
     if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
         o.showUsage = True
-    if o.showUsage or not (len(o.searchQuery) or o.cves):
+    if o.showUsage or not (len(o.searchQuery) or o.cves or o.q_iava):
         p.print_usage()
         print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
@@ -428,7 +438,7 @@ class RHSecApiParse:
             print("{0}: {1}".format(prog, e), file=stderr)
             err_print_support_urls()
             exit(1)
-        print("Search query results found: {0}".format(len(result)), file=stderr)
+        print("CVEs found: {0}".format(len(result)), file=stderr)
         if not self.onlyCount:
             print(file=stderr)
         return result   
@@ -608,6 +618,61 @@ class RHSecApiParse:
         self.Print("\n")
 
 
+def iavm_query(url, progressToStderr=False):
+    """Get IAVA json from IAVM Mapper App."""
+    if progressToStderr:
+        print("Getting '{0}' ...".format(url), file=stderr)
+    try:
+        r = requests.get(url, auth=())
+    except requests.exceptions.ConnectionError as e:
+        print("{0}: {1}".format(prog, e), file=stderr)
+        err_print_support_urls()
+        exit(1)
+    except requests.exceptions.HTTPError as e:
+        print("{0}: {1}".format(prog, e), file=stderr)
+        err_print_support_urls()
+        exit(1)
+    except requests.exceptions.RequestException as e:
+        print("{0}: {1}".format(prog, e), file=stderr)
+        err_print_support_urls()
+        exit(1)
+    try:
+         result = r.json()
+    except:
+        print("{0}: Login error; unable to get IAVA info\n\n"
+              "IAVA->CVE mapping data is not provided by the public RH Security Data API.\n"
+              "Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).\n\n"
+              "Access to this data requires RH Customer Portal credentials be provided.\n"
+              "Create a ~/.netrc with the following contents:\n\n"
+              "machine access.redhat.com\n"
+              "  login YOUR-CUSTOMER-PORTAL-LOGIN\n"
+              "  password YOUR_PASSWORD_HERE\n".format(prog),
+              file=stderr)
+        err_print_support_urls()
+        exit(1)
+    return result
+
+
+def get_iava(iavaId, progressToStderr=False, onlyCount=False):
+    """Validate IAVA number and return json."""
+    url = 'https://access.redhat.com/labs/iavmmapper/api/iava/'
+    result = iavm_query(url, progressToStderr=progressToStderr)
+    if iavaId not in result:
+        print("{0}: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of '{1}'\n".format(prog, iavaId), file=stderr)
+        err_print_support_urls()
+        exit(1)
+    url += '{0}'.format(iavaId)
+    result = iavm_query(url, progressToStderr=progressToStderr)
+    try:
+        print("CVEs found: {0}".format(len(result['IAVM']['CVEs']['CVENumber'])), file=stderr)
+    except:
+        err_print_support_urls()
+        raise
+    if not onlyCount:
+        print(file=stderr)
+    return result
+
+
 def main(opts):
     a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose, opts.wrapWidth)
     if len(opts.searchQuery):
@@ -619,12 +684,24 @@ def main(opts):
         elif not opts.count:
             a.Print(jprint(result, False))
             a.Print("\n")
+    elif opts.q_iava:
+        result = get_iava(opts.q_iava, opts.verbose, opts.count)
+        if opts.extract_search:
+            if result:
+                opts.cves.extend(result['IAVM']['CVEs']['CVENumber'])
+        elif not opts.count:
+            a.Print(jprint(result, False))
+            a.Print("\n")
     if opts.cves:
         for cve in opts.cves:
             a.print_cve(cve)
         if opts.count:
-            print("Valid CVE results found: {0} of {1}".format(a.cveCount, len(opts.cves)), file=stderr)
-            print("Invalid CVE queries: {0} of {1}".format(len(opts.cves)-a.cveCount, len(opts.cves)), file=stderr)
+            total = len(opts.cves)
+            valid = a.cveCount
+            invalid = total - valid
+            print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid, total), file=stderr)
+            if invalid > 0:
+                print("Invalid CVE queries: {0} of {1}".format(invalid, total), file=stderr)
     if opts.pastebin:
         opts.p_lang = 'text'
         if opts.json or not opts.cves:

@@ -1,10 +1,10 @@
 # redhat-security-data-api
 
-Threw this new `rhsecapi` tool together quickly to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
+`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
 
-No promises that anything will stay the same as long as it's under 1.0 and the API is still beta. I might change the name or the options. I haven't thoroughly-tested yet. (Expect further releases.) I welcome feedback/issues and pull requests. If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+Disclaimer: I make no promises that anything will stay the same as long as `rhsecapi` is under 1.0. I might change the name or the options. I welcome feedback/issues and pull requests. If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
-### Simple CVE Queries
+## Simple CVE retrieval
 
 ```
 $ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298
@@ -69,19 +69,18 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
    Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
-### BASH intelligent tab-completion
+## BASH intelligent tab-completion
 
 ```
 $ rhsecapi --
--a                -f                -m                --q-advisory      --q-cwe           --urls
---all-fields      --fields          --most-fields     --q-after         --q-package       -v
--c                -h                -p                --q-before        --q-raw           --verbose
---count           --help            --pastebin        --q-bug           --q-severity      -w
--E                -j                --p-expire        --q-cvss          -u                --wrap
---extract-search  --json            --p-user          --q-cvss3         -U                -x
+--all-fields      --json            --q-advisory      --q-cvss3         --q-severity
+--count           --most-fields     --q-after         --q-cwe           --urls
+--extract-search  --pastebin        --q-before        --q-iava          --verbose
+--fields          --p-expire        --q-bug           --q-package       --wrap
+--help            --p-user          --q-cvss          --q-raw           
 ```
 
-### Field display
+## Field display
 
 ```
 $ rhsecapi CVE-2016-5387 --fields cvss,cvss3
@@ -194,11 +193,11 @@ CVE-2016-5387
    Will not fix: Red Hat JBoss EWS 1 [httpd]
 ```
 
-### Search queries
+## Find CVEs by attributes
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical
-Search query results found: 1
+CVEs found: 1
 
 [
   {
@@ -235,12 +234,12 @@ Search query results found: 1
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --count
-Search query results found: 6
+CVEs found: 6
 ```
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --extract-search --fields=''
-Search query results found: 6
+CVEs found: 6
 
 CVE-2015-3456
 CVE-2015-0235
@@ -250,25 +249,178 @@ CVE-2014-3646
 CVE-2014-3567
 ```
 
-### Help page
+### Find CVEs by IAVA ID
+
+```
+$ rhsecapi --verbose --q-iava invalid
+Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+rhsecapi: Login error; unable to get IAVA info
+
+IAVA->CVE mapping data is not provided by the public RH Security Data API.
+Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).
+
+Access to this data requires RH Customer Portal credentials be provided.
+Create a ~/.netrc with the following contents:
+
+machine access.redhat.com
+  login YOUR-CUSTOMER-PORTAL-LOGIN
+  password YOUR_PASSWORD_HERE
+
+For help, open an issue at http://github.com/ryran/redhat-security-data-api
+Or post a comment at https://access.redhat.com/discussions/2713931
+
+$ vim ~/.netrc
+```
+
+```
+$ rhsecapi --verbose --q-iava invalid 
+Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+rhsecapi: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'invalid'
+
+For help, open an issue at http://github.com/ryran/redhat-security-data-api
+Or post a comment at https://access.redhat.com/discussions/2713931
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 
+CVEs found: 4
+
+{
+  "IAVM": {
+    "CVEs": {
+      "CVENumber": [
+        "CVE-2015-7940", 
+        "CVE-2016-2107", 
+        "CVE-2016-4979", 
+        "CVE-2016-5604"
+      ]
+    }, 
+    "S": {
+      "IAVM": "2016-A-0287", 
+      "Severity": "CAT I", 
+      "Title": "Multiple Vulnerabilities in Oracle Enterprise Manager"
+    }
+  }
+}
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 --count 
+CVEs found: 4
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 --extract-search --count 
+CVEs found: 4
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
+Valid Red Hat CVE results retrieved: 3 of 4
+Invalid CVE queries: 1 of 4
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 --extract-search 
+CVEs found: 4
+
+CVE-2015-7940
+  IMPACT:  Moderate
+  DATE:  2015-09-14
+  BUGZILLA:  1276272
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Jboss A-MQ 6.3: RHSA-2016:2036
+   Red Hat Jboss Fuse 6.3: RHSA-2016:2035
+  PACKAGE_STATE:
+   Will not fix: Red Hat Satellite 6 [bouncycastle]
+   Will not fix: Red Hat Subscription Asset Manager 1 [bouncycastle]
+
+CVE-2016-2107
+  IMPACT:  Moderate
+  DATE:  2016-05-03
+  BUGZILLA:  1331426
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 6 [openssl-1.0.1e-48.el6_8.1]: RHSA-2016:0996
+   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-51.el7_2.5]: RHSA-2016:0722
+   Red Hat Enterprise Linux Extended Update Support 6.7 [openssl-1.0.1e-42.el6_7.5]: RHSA-2016:2073
+  PACKAGE_STATE:
+   Not affected: Red Hat JBoss EAP 5 [openssl]
+   Not affected: Red Hat JBoss EAP 6 [openssl]
+   Not affected: Red Hat JBoss EWS 2 [openssl]
+   Affected: Red Hat JBoss Web Server 3.0 [openssl]
+   Not affected: Red Hat Enterprise Linux 4 [openssl096b]
+   Not affected: Red Hat Enterprise Linux 4 [openssl]
+   Not affected: Red Hat Enterprise Linux 5 [openssl097a]
+   Not affected: Red Hat Enterprise Linux 5 [openssl]
+   Not affected: Red Hat Enterprise Linux 6 [openssl098e]
+   Not affected: Red Hat Enterprise Linux 7 [openssl098e]
+
+CVE-2016-4979
+  IMPACT:  Moderate
+  DATE:  2016-07-05
+  BUGZILLA:  1352476
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: RHSA-2016:1420
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: RHSA-2016:1420
+  PACKAGE_STATE:
+   Not affected: Red Hat Directory Server 8 [httpd]
+   Not affected: Red Hat JBoss Core Services 1 [jbcs-httpd24-httpd]
+   Not affected: Red Hat JBoss EAP 5 [httpd]
+   Not affected: Red Hat JBoss EAP 6 [httpd22]
+   Not affected: Red Hat JBoss EAP 6 [httpd]
+   Not affected: Red Hat JBoss EWS 1 [httpd]
+   Not affected: Red Hat JBoss EWS 2 [httpd]
+   Not affected: Red Hat JBoss Web Server 3.0 [httpd]
+   Not affected: Red Hat Enterprise Linux 5 [httpd]
+   Not affected: Red Hat Enterprise Linux 6 [httpd]
+   Not affected: Red Hat Enterprise Linux 7 [httpd]
+
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
+CVE-2016-5604
+ Not present in Red Hat CVE database
+ Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 -x -u -f affected_release
+CVEs found: 4
+
+CVE-2015-7940 (https://access.redhat.com/security/cve/CVE-2015-7940)
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Jboss A-MQ 6.3: https://access.redhat.com/errata/RHSA-2016:2036
+   Red Hat Jboss Fuse 6.3: https://access.redhat.com/errata/RHSA-2016:2035
+
+CVE-2016-2107 (https://access.redhat.com/security/cve/CVE-2016-2107)
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 6 [openssl-1.0.1e-48.el6_8.1]: https://access.redhat.com/errata/RHSA-2016:0996
+   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-51.el7_2.5]: https://access.redhat.com/errata/RHSA-2016:0722
+   Red Hat Enterprise Linux Extended Update Support 6.7 [openssl-1.0.1e-42.el6_7.5]: https://access.redhat.com/errata/RHSA-2016:2073
+
+CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: https://access.redhat.com/errata/RHSA-2016:1420
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: https://access.redhat.com/errata/RHSA-2016:1420
+
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
+CVE-2016-5604
+ Not present in Red Hat CVE database
+ Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
+```
+
+## Help page
 
 ```
 $ rhsecapi -h
 usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE]
-                [--q-raw RAWQUERY] [-x] [-f FIELDS | -a | -m | -j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
-                [--help]
+                [--q-raw RAWQUERY] [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m]
+                [-j] [-u] [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]]
+                [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
 Original announcement: https://access.redhat.com/blogs/766093/posts/2387601
 Docs: https://access.redhat.com/documentation/en/red-hat-security-data-api/
 
-PERFORM GENERAL SEARCH QUERY:
-  Initiate a single search query and print JSON results
-
+FIND CVES BY ATTRIBUTE:
   --q-before YEAR-MM-DD
                         Narrow down results to before a certain time period
   --q-after YEAR-MM-DD  Narrow down results to after a certain time period
@@ -287,26 +439,36 @@ PERFORM GENERAL SEARCH QUERY:
   --q-raw RAWQUERY      Narrow down results by RAWQUERY (e.g.: 'per_page=500'
                         or 'a=b&x=y'
 
-PERFORM CVE QUERIES:
-  Search by CVE in addition to or instead above search query
+FIND CVES BY IAVA:
+  --q-iava IAVA         Narrow down results by IAVA number (e.g.:
+                        '2016-A-0293'); note however that this feature is not
+                        provided by the Red Hat Security Data API and thus:
+                        (1) it requires login to the Red Hat Customer Portal
+                        and (2) it cannot be used in concert with any of the
+                        above search parameters
 
-  CVE                   Query a CVE or space-separated list of CVEs (e.g.:
-                        'CVE-2016-5387')
+QUERY SPECIFIC CVES:
   -x, --extract-search  Determine what CVEs to query by extracting them from
-                        general search query as initiated by at least one of
-                        the GENERAL SEARCH QUERY options (suppresses usual
-                        JSON result of search query)
+                        above search query (as initiated by at least one of
+                        the --q-xxx options); this option suppresses usual
+                        JSON result of search queries
+  CVE                   Retrieve a CVE or space-separated list of CVEs (e.g.:
+                        'CVE-2016-5387')
 
-CVE QUERY DISPLAY OPTIONS:
-  -f, --fields FIELDS   Comma-separated fields to be displayed (default:
-                        threat_severity, bugzilla, affected_release,
-                        package_state)
+CVE DISPLAY OPTIONS:
+  -f, --fields +FIELDS  Comma-separated fields to be displayed (default:
+                        threat_severity, public_date, bugzilla,
+                        affected_release, package_state); optionally prepend
+                        with plus (+) sign to add fields to the default (e.g.,
+                        '-f +iava,cvss3')
   -a, --all-fields      Print all supported fields (currently:
                         threat_severity, public_date, iava, cwe, cvss, cvss3,
                         bugzilla, acknowledgement, details, statement,
+                        mitigation, upstream_fix, references,
                         affected_release, package_state)
   -m, --most-fields     Print all fields mentioned above except the heavy-text
-                        ones -- acknowledgement, details, statement
+                        ones -- (excluding: acknowledgement, details,
+                        statement, mitigation, references)
   -j, --json            Print full & raw JSON output
   -u, --urls            Print URLs for all relevant fields
 
@@ -330,11 +492,11 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.1.6 last mod 2016/10/24
+  rhsecapi v0.2.0 last mod 2016/10/26
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
-### Testing from python shell
+## Testing from python shell
 
 ```
 $ python
