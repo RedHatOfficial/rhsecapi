@@ -2,7 +2,37 @@
 
 `rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
 
-Disclaimer: I make no promises that anything will stay the same as long as `rhsecapi` is under 1.0. I might change the name or the options. I welcome feedback/issues and pull requests. If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+I welcome feedback/issues and pull requests. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+
+## Jump to ...
+- [Abbreviated usage](#Abbreviated-usage)
+- [Simple CVE retrieval](#Simple-CVE-retrieval)
+- [BASH intelligent tab-completion](#BASH-intelligent-tab-completion)
+- [Field display](#Field-display)
+- [Find CVEs by attributes](#Find-CVEs-by-attributes)
+- [Find CVEs by IAVA](#Find-CVEs-by-IAVA)
+- [Full help page](#Full-help-page)
+- [Testing from python shell](#Testing-from-python-shell)
+
+## Abbreviated usage
+
+```
+$ rhsecapi -h
+usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
+                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
+                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
+                [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
+                [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
+                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
+                [--help]
+                [CVE [CVE ...]]
+
+Run rhsecapi --help for full help page
+
+VERSION:
+  rhsecapi v0.2.1 last mod 2016/10/26
+  See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
+```
 
 ## Simple CVE retrieval
 
@@ -238,7 +268,7 @@ CVE-2015-0235
 
 
 
-### Find CVEs by IAVA ID
+### Find CVEs by IAVA
 
 ```
 $ rhsecapi --verbose --q-iava invalid
@@ -398,7 +428,7 @@ CVE-2016-5604
  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
 ```
 
-## Help page
+## Full help page
 
 ```
 $ rhsecapi --help
