@@ -289,9 +289,7 @@ For help, open an issue at http://github.com/ryran/redhat-security-data-api
 Or post a comment at https://access.redhat.com/discussions/2713931
 
 $ vim ~/.netrc
-```
 
-```
 $ rhsecapi --verbose --q-iava invalid 
 Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
 rhsecapi: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'invalid'
