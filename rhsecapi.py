@@ -36,7 +36,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.2.0'
+vers['version'] = '0.2.1'
 vers['date'] = '2016/10/26'
 # Supported CVE fields
 allFields = ['threat_severity',
@@ -100,20 +100,28 @@ class RedHatSecDataApiClient:
         if dt not in dataTypes:
             raise ValueError("Invalid data type ('{0}') requested; should be one of: {1}".format(dt, ", ".join(dataTypes)))
 
-    def __get(self, url):
+    def __get(self, url, params={}):
         url = self.apiurl + url
+        u = ""
+        if params:
+            for k in params:
+                if params[k]:
+                    u += "&{0}={1}".format(k, params[k])
+            u = u.replace("&", "?", 1)
         if self.progressToStderr:
-            print("Getting '{0}' ...".format(url), file=stderr)
-        r = requests.get(url)
+            print("Getting '{0}{1}' ...".format(url, u), file=stderr)
+        r = requests.get(url, params=params)
         r.raise_for_status()
-        return url, r.json()
+        return r.url, r.json()
 
     def _search(self, dataType, params=None):
         self.__validate_data_type(dataType)
         url = '/{0}.json'.format(dataType)
-        if params:
+        if isinstance(params, dict):
+            return self.__get(url, params)
+        elif params:
             url += '?{0}'.format(params)
-        return self.__get(url)
+            return self.__get(url)
 
     def _retrieve(self, dataType, query):
         self.__validate_data_type(dataType)
@@ -246,8 +254,17 @@ def parse_args():
         '--q-cvss3', metavar='SCORE',
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
     g_listByAttr.add_argument(
-        '--q-raw', metavar='RAWQUERY',
-        help="Narrow down results by RAWQUERY (e.g.: 'per_page=500' or 'a=b&x=y'")
+        '--q-empty', action='store_true',
+        help="Allow performing an empty search; when used with no other --q-xxx options, this will return the first 1000 of the most recent CVEs (subject to below PAGESZ & PAGENUM)")
+    g_listByAttr.add_argument(
+        '--q-pagesize', metavar='PAGESZ', type=int,
+        help="Set a cap on the number of results that will be returned (default: 1000)")
+    g_listByAttr.add_argument(
+        '--q-pagenum', metavar='PAGENUM', type=int,
+        help="Select what page number to return (default: 1); only relevant when there are more than PAGESZ results")
+    g_listByAttr.add_argument(
+        '--q-raw', metavar='RAWQUERY', action='append',
+        help="Narrow down results by RAWQUERY (e.g.: '--q-raw a=x --q-raw b=y'); this allows passing arbitrary params (e.g. something new that is unsupported by {0})".format(prog))
     # New group
     g_listByIava = p.add_argument_group(
         'FIND CVES BY IAVA')
@@ -335,33 +352,34 @@ def parse_args():
         tmp.flush()
         call(['less', tmp.name])
         exit()
-    o.searchQuery = ''
-    if o.q_before:
-        o.searchQuery += '&before={0}'.format(o.q_before)
-    if o.q_after:
-        o.searchQuery += '&after={0}'.format(o.q_after)
-    if o.q_bug:
-        o.searchQuery += '&bug={0}'.format(o.q_bug)
-    if o.q_advisory:
-        o.searchQuery += '&advisory={0}'.format(o.q_advisory)
-    if o.q_severity:
-        o.searchQuery += '&severity={0}'.format(o.q_severity)
-    if o.q_package:
-        o.searchQuery += '&package={0}'.format(o.q_package)
-    if o.q_cwe:
-        o.searchQuery += '&cwe={0}'.format(o.q_cwe)
-    if o.q_cvss:
-        o.searchQuery += '&cvss_score={0}'.format(o.q_cvss)
-    if o.q_cvss3:
-        o.searchQuery += '&cvss3_score={0}'.format(o.q_cvss3)
+    # Add search params to dict
+    o.searchParams = {
+        'before': o.q_before,
+        'after': o.q_after,
+        'bug': o.q_bug,
+        'advisory': o.q_advisory,
+        'severity': o.q_severity,
+        'package': o.q_package,
+        'cwe': o.q_cwe,
+        'cvss_score': o.q_cvss,
+        'cvss3_score': o.q_cvss3,
+        'per_page': o.q_pagesize,
+        'page': o.q_pagenum,
+        }
     if o.q_raw:
-        o.searchQuery += '&{0}'.format(o.q_raw)
-    if o.q_iava and len(o.searchQuery):
+        for param in o.q_raw:
+            p = param.split("=")
+            o.searchParams[p[0]] = p[1]
+    if all(val is None for val in o.searchParams.values()) and not o.q_empty:
+        o.doSearch = False
+    else:
+        o.doSearch = True
+    if o.q_iava and o.doSearch:
         print("{0}: The --q-iava option is not compatible with other --q-xxx options; it can only be used alone".format(prog), file=stderr)
         exit(1)
     if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
         o.showUsage = True
-    if o.showUsage or not (len(o.searchQuery) or o.cves or o.q_iava):
+    if o.showUsage or not (o.doSearch or o.cves or o.q_iava):
         p.print_usage()
         print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
@@ -675,23 +693,29 @@ def get_iava(iavaId, progressToStderr=False, onlyCount=False):
 
 def main(opts):
     a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose, opts.wrapWidth)
-    if len(opts.searchQuery):
-        result = a.search_query(opts.searchQuery)
+    if opts.doSearch:
+        result = a.search_query(opts.searchParams)
         if opts.extract_search:
             if result:
                 for i in result:
                     opts.cves.append(i['CVE'])
         elif not opts.count:
-            a.Print(jprint(result, False))
-            a.Print("\n")
+            if opts.json:
+                a.Print(jprint(result, False) + "\n")
+            else:
+                for cve in result:
+                    a.Print(cve['CVE'] + "\n")
     elif opts.q_iava:
         result = get_iava(opts.q_iava, opts.verbose, opts.count)
         if opts.extract_search:
             if result:
                 opts.cves.extend(result['IAVM']['CVEs']['CVENumber'])
         elif not opts.count:
-            a.Print(jprint(result, False))
-            a.Print("\n")
+            if opts.json:
+                a.Print(jprint(result, False) + "\n")
+            else:
+                for cve in result['IAVM']['CVEs']['CVENumber']:
+                    a.Print(cve + "\n")
     if opts.cves:
         for cve in opts.cves:
             a.print_cve(cve)
