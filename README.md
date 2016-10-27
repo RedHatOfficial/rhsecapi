@@ -73,11 +73,12 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
 
 ```
 $ rhsecapi --
---all-fields      --json            --q-advisory      --q-cvss3         --q-severity
---count           --most-fields     --q-after         --q-cwe           --urls
---extract-search  --pastebin        --q-before        --q-iava          --verbose
---fields          --p-expire        --q-bug           --q-package       --wrap
---help            --p-user          --q-cvss          --q-raw           
+--all-fields      --most-fields     --q-before        --q-iava          --urls
+--count           --pastebin        --q-bug           --q-package       --verbose
+--extract-search  --p-expire        --q-cvss          --q-pagenum       --wrap
+--fields          --p-user          --q-cvss3         --q-pagesize      
+--help            --q-advisory      --q-cwe           --q-raw           
+--json            --q-after         --q-empty         --q-severity      
 ```
 
 ## Field display
@@ -196,49 +197,7 @@ CVE-2016-5387
 ## Find CVEs by attributes
 
 ```
-$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical
-CVEs found: 1
-
-[
-  {
-    "CVE": "CVE-2015-0235", 
-    "CWE": "CWE-131->CWE-122", 
-    "advisories": [
-      "RHSA-2015:0090", 
-      "RHSA-2015:0092", 
-      "RHSA-2015:0126", 
-      "RHSA-2015:0101", 
-      "RHSA-2015:0099"
-    ], 
-    "affected_packages": [
-      "glibc-2.5-123.el5_11.1", 
-      "glibc-2.12-1.149.el6_6.5", 
-      "rhev-hypervisor6-6.6-20150123.1.el6ev", 
-      "glibc-2.17-55.el7_0.5", 
-      "glibc-2.3.4-2.57.el4.2", 
-      "glibc-2.5-107.el5_9.8", 
-      "glibc-2.12-1.107.el6_4.7", 
-      "glibc-2.12-1.132.el6_5.5", 
-      "glibc-2.5-58.el5_6.6", 
-      "glibc-2.12-1.47.el6_2.15"
-    ], 
-    "bugzilla": "1183461", 
-    "cvss_score": 6.8, 
-    "cvss_scoring_vector": "AV:N/AC:M/Au:N/C:P/I:P/A:P", 
-    "public_date": "2015-01-27T00:00:00+00:00", 
-    "resource_url": "https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json", 
-    "severity": "critical"
-  }
-]
-```
-
-```
-$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --count
-CVEs found: 6
-```
-
-```
-$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --extract-search --fields=''
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01
 CVEs found: 6
 
 CVE-2015-3456
@@ -248,6 +207,36 @@ CVE-2014-3645
 CVE-2014-3646
 CVE-2014-3567
 ```
+
+```
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --count
+CVEs found: 6
+```
+
+```
+$ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --extract-search --verbose 
+Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-01&severity=critical&package=rhev-hypervisor6' ...
+CVEs found: 1
+
+Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json' ...
+CVE-2015-0235
+  IMPACT:  Critical
+  DATE:  2015-01-27
+  BUGZILLA:  1183461
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 5 [glibc-2.5-123.el5_11.1]: RHSA-2015:0090
+   Red Hat Enterprise Linux 6 [glibc-2.12-1.149.el6_6.5]: RHSA-2015:0092
+   RHEV Hypervisor for RHEL-6 [rhev-hypervisor6-6.6-20150123.1.el6ev]: RHSA-2015:0126
+   Red Hat Enterprise Linux 7 [glibc-2.17-55.el7_0.5]: RHSA-2015:0092
+   Red Hat Enterprise Linux Extended Lifecycle Support 4 [glibc-2.3.4-2.57.el4.2]: RHSA-2015:0101
+   Red Hat Enterprise Linux EUS (v. 5.9 server) [glibc-2.5-107.el5_9.8]: RHSA-2015:0099
+   Red Hat Enterprise Linux Extended Update Support 6.4 [glibc-2.12-1.107.el6_4.7]: RHSA-2015:0099
+   Red Hat Enterprise Linux Extended Update Support 6.5 [glibc-2.12-1.132.el6_5.5]: RHSA-2015:0099
+   Red Hat Enterprise Linux Long Life (v. 5.6 server) [glibc-2.5-58.el5_6.6]: RHSA-2015:0099
+   Red Hat Enterprise Linux Advanced Update Support 6.2 [glibc-2.12-1.47.el6_2.15]: RHSA-2015:0099
+```
+
+
 
 ### Find CVEs by IAVA ID
 
@@ -285,6 +274,16 @@ Or post a comment at https://access.redhat.com/discussions/2713931
 $ rhsecapi --q-iava 2016-A-0287 
 CVEs found: 4
 
+CVE-2015-7940
+CVE-2016-2107
+CVE-2016-4979
+CVE-2016-5604
+```
+
+```
+$ rhsecapi --q-iava 2016-A-0287 --json 
+CVEs found: 4
+
 {
   "IAVM": {
     "CVEs": {
@@ -302,11 +301,6 @@ CVEs found: 4
     }
   }
 }
-```
-
-```
-$ rhsecapi --q-iava 2016-A-0287 --count 
-CVEs found: 4
 ```
 
 ```
@@ -407,13 +401,14 @@ CVE-2016-5604
 ## Help page
 
 ```
-$ rhsecapi -h
+$ rhsecapi --help
 usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
-                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE]
-                [--q-raw RAWQUERY] [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m]
-                [-j] [-u] [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]]
-                [-h] [--help]
+                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
+                [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
+                [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
+                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
+                [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -436,8 +431,17 @@ FIND CVES BY ATTRIBUTE:
                         e.g.: '295,300')
   --q-cvss SCORE        Narrow down results by CVSS base score (e.g.: '8.0')
   --q-cvss3 SCORE       Narrow down results by CVSSv3 base score (e.g.: '5.1')
-  --q-raw RAWQUERY      Narrow down results by RAWQUERY (e.g.: 'per_page=500'
-                        or 'a=b&x=y'
+  --q-empty             Allow performing an empty search; when used with no
+                        other --q-xxx options, this will return the first 1000
+                        of the most recent CVEs (subject to below PAGESZ &
+                        PAGENUM)
+  --q-pagesize PAGESZ   Set a cap on the number of results that will be
+                        returned (default: 1000)
+  --q-pagenum PAGENUM   Select what page number to return (default: 1); only
+                        relevant when there are more than PAGESZ results
+  --q-raw RAWQUERY      Narrow down results by RAWQUERY (e.g.: '--q-raw a=x
+                        --q-raw b=y'); this allows passing arbitrary params
+                        (e.g. something new that is unsupported by rhsecapi)
 
 FIND CVES BY IAVA:
   --q-iava IAVA         Narrow down results by IAVA number (e.g.:
@@ -492,7 +496,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.2.0 last mod 2016/10/26
+  rhsecapi v0.2.1 last mod 2016/10/26
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
@@ -532,8 +536,10 @@ class RedHatSecDataApiClient
  |  search_oval(self, params=None)
 (END)
 >>> r.a.search_oval("cve=CVE-2016-5387")
+Getting 'https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387' ...
 ('https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387', [{u'severity': u'important', u'bugzillas': [u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1421', u'CVEs': [u'CVE-2016-5387']}, {u'severity': u'important', u'bugzillas': [u'1347648', u'1353269', u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1422', u'CVEs': [u'CVE-2016-5387']}])
 >>> r.jprint(r.a.search_oval("cve=CVE-2016-5387"))
+Getting 'https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387' ...
 [
   "https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387", 
   [
