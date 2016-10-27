@@ -2,17 +2,17 @@
 
 `rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
 
-I welcome feedback/issues and pull requests. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+Feedback/issues and pull requests are welcome. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
 ## Jump to ...
-- [Abbreviated usage](#Abbreviated-usage)
-- [Simple CVE retrieval](#Simple-CVE-retrieval)
-- [BASH intelligent tab-completion](#BASH-intelligent-tab-completion)
-- [Field display](#Field-display)
-- [Find CVEs by attributes](#Find-CVEs-by-attributes)
-- [Find CVEs by IAVA](#Find-CVEs-by-IAVA)
-- [Full help page](#Full-help-page)
-- [Testing from python shell](#Testing-from-python-shell)
+- [Abbreviated usage](#abbreviated-usage)
+- [Simple CVE retrieval](#simple-cve-retrieval)
+- [BASH intelligent tab-completion](#bash-intelligent-tab-completion)
+- [Field display](#field-display)
+- [Find CVEs by attributes](#find-cves-by-attributes)
+- [Find CVEs by IAVA](#find-cves-by-iava)
+- [Full help page](#full-help-page)
+- [Testing from python shell](#testing-from-python-shell)
 
 ## Abbreviated usage
 
