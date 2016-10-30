@@ -39,7 +39,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.6.10'
+vers['version'] = '0.6.11'
 vers['date'] = '2016/10/30'
 # Set default number of threads to use
 cpuCount = multiprocessing.cpu_count() + 1
@@ -383,7 +383,7 @@ def parse_args():
     #     '--p-public', dest='p_private', default='yes', action='store_const', const='no',
     #     help="Set paste to be publicly-discoverable")
     g_general.add_argument(
-        '-E', '--p-expire', metavar='DAYS', nargs='?', const=2, default=28, type=int,
+        '-E', '--pexpire', metavar='DAYS', nargs='?', const=2, default=28, type=int,
         help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '2' if option is used but DAYS is omitted)")
     # g_general.add_argument(
     #     '--p-project', metavar='PROJECT',
@@ -754,7 +754,6 @@ def main(opts):
             else:
                 for cve in result:
                     searchOutput.append(cve['CVE'] + "\n")
-            searchOutput.append("\n")
             if not opts.pastebin:
                 print("".join(searchOutput))
     elif opts.q_iava:
@@ -768,10 +767,13 @@ def main(opts):
             else:
                 for cve in result['IAVM']['CVEs']['CVENumber']:
                     iavaOutput.append(cve + "\n")
-            iavaOutput.append("\n")
             if not opts.pastebin:
                 print("".join(iavaOutput))
     if opts.cves:
+        if searchOutput:
+            searchOutput.append("\n")
+        if iavaOutput:
+            iavaOutput.append("\n")
         pool = multiprocessing.Pool(opts.threads)
         results = pool.map(a.print_cve, opts.cves)
         pool.close()
@@ -791,7 +793,7 @@ def main(opts):
             opts.p_lang = 'Python'
         data = "".join(searchOutput) + "".join(iavaOutput) + "".join(cveOutput)
         try:
-            response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.p_expire)
+            response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.pexpire)
         except ValueError as e:
             print(e, file=stderr)
             print("{0}: Submitting to pastebin failed; print results to stdout instead? [y]".format(prog), file=stderr)
@@ -800,7 +802,7 @@ def main(opts):
                 print(data, end="")
         else:
             print(response)
-    else:
+    elif opts.cves:
         print("".join(cveOutput), end="")
     
 
