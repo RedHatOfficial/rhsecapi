@@ -41,7 +41,7 @@ prog = 'rhsecapi'
 vers = {}
 vers['version'] = '0.6.11'
 vers['date'] = '2016/10/30'
-# Set default number of threads to use
+# Set default number of workers to use
 cpuCount = multiprocessing.cpu_count() + 1
 # Supported CVE fields
 allFields = ['threat_severity',
@@ -364,8 +364,8 @@ def parse_args():
         '-v', '--verbose', action='store_true',
         help="Print API urls to stderr")
     g_general.add_argument(
-        '-t', '--threads', metavar='N', type=int, default=cpuCount,
-        help="Set number of concurrent CVE queries to make (default on this system: {0})".format(cpuCount))
+        '-W', '--workers', metavar='N', type=int, default=cpuCount,
+        help="Set number of concurrent worker processes to allow when making CVE queries (default on this system: {0})".format(cpuCount))
     g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
@@ -777,7 +777,7 @@ def main(opts):
         # Disable sigint before starting process pool
         import signal
         original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-        pool = multiprocessing.Pool(opts.threads)
+        pool = multiprocessing.Pool(opts.workers)
         # Re-enable receipt of sigint
         signal.signal(signal.SIGINT, original_sigint_handler)
         try:

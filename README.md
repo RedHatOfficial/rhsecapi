@@ -23,7 +23,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-t N] [-p] [-E [DAYS]] [-h] [--help]
+                [-w [WIDTH]] [-c] [-v] [-W N] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Run rhsecapi --help for full help page
@@ -453,7 +453,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-t N] [-p] [-E [DAYS]] [-h] [--help]
+                [-w [WIDTH]] [-c] [-v] [-W N] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -529,8 +529,8 @@ GENERAL OPTIONS:
                         option is used but WIDTH is omitted
   -c, --count           Print a count of the number of entities found
   -v, --verbose         Print API urls to stderr
-  -t, --threads N       Set number of concurrent CVE queries to make (default
-                        on this system: 5)
+  -W, --workers N       Set number of concurrent worker processes to allow
+                        when making CVE queries (default on this system: 5)
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
   -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
