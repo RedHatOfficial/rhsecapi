@@ -39,7 +39,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.6.9'
+vers['version'] = '0.6.10'
 vers['date'] = '2016/10/30'
 # Set default number of threads to use
 cpuCount = multiprocessing.cpu_count() + 1
@@ -166,9 +166,10 @@ class RedHatSecDataApiClient:
         return self._retrieve('oval', rhsa)
 
 
-def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', expire=28, project=None, url='http://paste.fedoraproject.org'):
+def fpaste_it(inputdata, lang='text', author=None, password=None, private='no', expire=28, project=None, url='http://paste.fedoraproject.org'):
     """Submit a new paste to fedora project pastebin."""
-    p = {
+    # Establish critical params
+    params = {
         'paste_data': inputdata,
         'paste_lang': lang,
         'api_submit': 'true',
@@ -176,22 +177,56 @@ def fpaste_it(inputdata, lang='text', user=None, password=None, private='yes', e
         'paste_private': private,
         'paste_expire': str(expire*24*60*60),
         }
-    if user:
-        p['paste_user'] = user
+    # Add optional params
     if password:
-        p['paste_password'] = password
+        params['paste_password'] = password
     if project:
-        p['paste_project'] = project
-    r = requests.post(url, p)
+        params['paste_project'] = project
+    if author:
+        # If author is too long, truncate
+        if len(author) > 50:
+            author = author[0:47] + "..."
+        params['paste_user'] = author
+    # Check size of what we're about to post and raise exception if too big
+    # FIXME: Figure out how to do this in requests without wasteful call to urllib.urlencode()
+    from urllib import urlencode
+    p = urlencode(params)
+    pasteSizeKiB = len(p)/1024.0
+    if pasteSizeKiB >= 512:
+        raise ValueError("Fedora Pastebin client: WARN: paste size ({0:.1f} KiB) too large (max size: 512 KiB)".format(pasteSizeKiB))
+    # Print status, then connect
+    print("Fedora Pastebin client: INFO: Uploading {0:.1f} KiB...".format(pasteSizeKiB), file=stderr)
+    r = requests.post(url, params)
     r.raise_for_status()
-    j = r.json()
+    try:
+        j = r.json()
+    except:
+        # If no json returned, we've hit some weird error
+        from tempfile import NamedTemporaryFile
+        tmp = NamedTemporaryFile(delete=False)
+        print(r.content, file=tmp)
+        tmp.flush()
+        raise ValueError("Fedora Pastebin client: ERROR: Didn't receive expected JSON response (saved to '{0}' for debugging)".format(tmp.name))
+    # Error keys adapted from Jason Farrell's fpaste
     if j.has_key('error'):
-        jprint(j)
-        exit(1)
+        err = j['error']
+        if err == 'err_spamguard_php':
+            raise ValueError("Fedora Pastebin server: ERROR: Poster's IP rejected as malicious")
+        elif err == 'err_spamguard_noflood':
+            raise ValueError("Fedora Pastebin server: ERROR: Poster's IP rejected as trying to flood")
+        elif err == 'err_spamguard_stealth':
+            raise ValueError("Fedora Pastebin server: ERROR: Paste input triggered spam filter")
+        elif err == 'err_spamguard_ipban':
+            raise ValueError("Fedora Pastebin server: ERROR: Poster's IP rejected as permanently banned")
+        elif err == 'err_author_numeric':
+            raise ValueError("Fedora Pastebin server: ERROR: Poster's author should be alphanumeric")
+        else:
+            raise ValueError("Fedora Pastebin server: ERROR: '{0}'".format(err))
+    # Put together URL with optional hash if requested
     pasteUrl = '{0}/{1}'.format(url, j['result']['id'])
     if 'yes' in private and j['result'].has_key('hash'):
         pasteUrl += '/{0}'.format(j['result']['hash'])
-    print(pasteUrl)
+    return pasteUrl
 
 
 def jprint(jsoninput, printOutput=True):
@@ -338,9 +373,9 @@ def parse_args():
     #     '--p-lang', metavar='LANG', default='text',
     #     choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
     #     help="Set the development language for the paste (default: 'text')")
-    g_general.add_argument(
-        '-U', '--p-user', metavar='NAME', default=prog,
-        help="Set alphanumeric paste author (default: '{0}')".format(prog))
+    # g_general.add_argument(
+    #     '-A', '--p-author', metavar='NAME', default=prog,
+    #     help="Set alphanumeric paste author (default: '{0}')".format(prog))
     # g_general.add_argument(
     #     '--p-password', metavar='PASSWD',
     #     help="Set password string to protect paste")
@@ -754,11 +789,17 @@ def main(opts):
         opts.p_lang = 'text'
         if opts.json or not opts.cves:
             opts.p_lang = 'Python'
-        opts.p_password = None
-        opts.p_private = 'yes'
-        opts.p_project = None
         data = "".join(searchOutput) + "".join(iavaOutput) + "".join(cveOutput)
-        fpaste_it(data, opts.p_lang, opts.p_user, opts.p_password, opts.p_private, opts.p_expire, opts.p_project)
+        try:
+            response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.p_expire)
+        except ValueError as e:
+            print(e, file=stderr)
+            print("{0}: Submitting to pastebin failed; print results to stdout instead? [y]".format(prog), file=stderr)
+            answer = raw_input("> ")
+            if "y" in answer or len(answer) == 0:
+                print(data, end="")
+        else:
+            print(response)
     else:
         print("".join(cveOutput), end="")
     
