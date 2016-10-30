@@ -23,14 +23,13 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
-                [--help]
+                [-w [WIDTH]] [-c] [-v] [-W N] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.2.1 last mod 2016/10/26
+  rhsecapi v0.6.11 last mod 2016/10/30
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
@@ -38,11 +37,14 @@ VERSION:
 
 ```
 $ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
+Valid Red Hat CVE results retrieved: 2 of 3
+Invalid CVE queries: 1 of 3
+
 CVE-2004-0230
   BUGZILLA:  No Bugzilla data
    Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy
 
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
 CVE-2015-4642
  Not present in Red Hat CVE database
  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4642
@@ -103,18 +105,20 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
 
 ```
 $ rhsecapi --
---all-fields      --most-fields     --q-before        --q-iava          --urls
---count           --pastebin        --q-bug           --q-package       --verbose
---extract-search  --p-expire        --q-cvss          --q-pagenum       --wrap
---fields          --p-user          --q-cvss3         --q-pagesize      
---help            --q-advisory      --q-cwe           --q-raw           
---json            --q-after         --q-empty         --q-severity      
+--all-fields      --most-fields     --q-bug           --q-package       --urls
+--count           --pastebin        --q-cvss          --q-pagenum       --verbose
+--extract-search  --pexpire         --q-cvss3         --q-pagesize      --wrap
+--fields          --q-advisory      --q-cwe           --q-raw
+--help            --q-after         --q-empty         --q-severity
+--json            --q-before        --q-iava          --threads
 ```
 
 ## Field display
 
 ```
 $ rhsecapi CVE-2016-5387 --fields cvss,cvss3
+Valid Red Hat CVE results retrieved: 1 of 1
+
 CVE-2016-5387
   CVSS:  5.0 (AV:N/AC:L/Au:N/C:N/I:P/A:N)
   CVSS3:  5.0 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N)
@@ -122,6 +126,8 @@ CVE-2016-5387
 
 ```
 $ rhsecapi --fields +cvss,cwe CVE-2015-6525 --urls
+Valid Red Hat CVE results retrieved: 1 of 1
+
 CVE-2015-6525 (https://access.redhat.com/security/cve/CVE-2015-6525)
   IMPACT:  Moderate (https://access.redhat.com/security/updates/classification)
   DATE:  2015-08-24
@@ -151,6 +157,8 @@ CVE-2015-6525 (https://access.redhat.com/security/cve/CVE-2015-6525)
 
 ```
 $ rhsecapi CVE-2010-5298 -f +iava,cvss
+Valid Red Hat CVE results retrieved: 1 of 1
+
 CVE-2010-5298
   IMPACT:  Moderate
   DATE:  2014-04-08
@@ -176,6 +184,8 @@ CVE-2010-5298
 
 ```
 $ rhsecapi CVE-2016-5387 --all-fields
+Valid Red Hat CVE results retrieved: 1 of 1
+
 CVE-2016-5387
   IMPACT:  Important
   DATE:  2016-07-18
@@ -249,6 +259,8 @@ Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-0
 CVEs found: 1
 
 Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json' ...
+Valid Red Hat CVE results retrieved: 1 of 1
+
 CVE-2015-0235
   IMPACT:  Critical
   DATE:  2015-01-27
@@ -343,6 +355,10 @@ Invalid CVE queries: 1 of 4
 $ rhsecapi --q-iava 2016-A-0287 --extract-search 
 CVEs found: 4
 
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
+Valid Red Hat CVE results retrieved: 3 of 4
+Invalid CVE queries: 1 of 4
+
 CVE-2015-7940
   IMPACT:  Moderate
   DATE:  2015-09-14
@@ -394,7 +410,6 @@ CVE-2016-4979
    Not affected: Red Hat Enterprise Linux 6 [httpd]
    Not affected: Red Hat Enterprise Linux 7 [httpd]
 
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
 CVE-2016-5604
  Not present in Red Hat CVE database
  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
@@ -403,6 +418,10 @@ CVE-2016-5604
 ```
 $ rhsecapi --q-iava 2016-A-0287 -x -u -f affected_release
 CVEs found: 4
+
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
+Valid Red Hat CVE results retrieved: 3 of 4
+Invalid CVE queries: 1 of 4
 
 CVE-2015-7940 (https://access.redhat.com/security/cve/CVE-2015-7940)
   AFFECTED_RELEASE (ERRATA):
@@ -420,7 +439,6 @@ CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
    Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: https://access.redhat.com/errata/RHSA-2016:1420
    Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: https://access.redhat.com/errata/RHSA-2016:1420
 
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
 CVE-2016-5604
  Not present in Red Hat CVE database
  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
@@ -435,8 +453,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-x] [-f +FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-p] [-U NAME] [-E [DAYS]] [-h]
-                [--help]
+                [-w [WIDTH]] [-c] [-v] [-W N] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -512,11 +529,11 @@ GENERAL OPTIONS:
                         option is used but WIDTH is omitted
   -c, --count           Print a count of the number of entities found
   -v, --verbose         Print API urls to stderr
+  -W, --workers N       Set number of concurrent worker processes to allow
+                        when making CVE queries (default on this system: 5)
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
-  -U, --p-user NAME     Set alphanumeric paste author (default: 'rhsecapi')
-  -E, --p-expire [DAYS]
-                        Set time in days after which paste will be deleted
+  -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
                         (defaults to '28'; specify '0' to disable expiration;
                         DAYS defaults to '2' if option is used but DAYS is
                         omitted)
@@ -524,7 +541,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.2.1 last mod 2016/10/26
+  rhsecapi v0.6.11 last mod 2016/10/30
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
