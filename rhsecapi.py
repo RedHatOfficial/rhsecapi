@@ -21,6 +21,9 @@ import argparse
 from sys import exit, stderr
 import requests, json, re
 import textwrap, fcntl, termios, struct
+import multiprocessing
+import copy_reg
+import types
 
 # Optional module
 try:
@@ -36,8 +39,10 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.2.1'
-vers['date'] = '2016/10/26'
+vers['version'] = '0.6.9'
+vers['date'] = '2016/10/30'
+# Set default number of threads to use
+cpuCount = multiprocessing.cpu_count() + 1
 # Supported CVE fields
 allFields = ['threat_severity',
              'public_date',
@@ -72,6 +77,17 @@ defaultFields = ['threat_severity',
                  'affected_release',
                  'package_state',
                  ]
+
+
+def _reduce_method(m):
+    if m.__self__ is None:
+        return getattr, (m.__class__, m.__func__.__name__)
+    else:
+        return getattr, (m.__self__, m.__func__.__name__)
+
+
+# Make it possible for pickle to serialize class functions
+copy_reg.pickle(types.MethodType, _reduce_method)
 
 
 def err_print_support_urls(msg=None):
@@ -313,6 +329,9 @@ def parse_args():
         '-v', '--verbose', action='store_true',
         help="Print API urls to stderr")
     g_general.add_argument(
+        '-t', '--threads', metavar='N', type=int, default=cpuCount,
+        help="Set number of concurrent CVE queries to make (default on this system: {0})".format(cpuCount))
+    g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
     # g_general.add_argument(
@@ -406,8 +425,9 @@ class RHSecApiParse:
     """
 
 
-    def __init__(self, fields='threat_severity,public_date,bugzilla,affected_release,package_state',
-                 printUrls=False, rawOutput=False, pastebin=False, onlyCount=False, verbose=False, wrapWidth=1):
+    def __init__(self,
+                 fields='threat_severity,public_date,bugzilla,affected_release,package_state',
+                 printUrls=False, rawOutput=False, onlyCount=False, verbose=False, wrapWidth=1):
         """Initialize class settings."""
         self.rhsda = RedHatSecDataApiClient(verbose)
         if len(fields):
@@ -417,8 +437,6 @@ class RHSecApiParse:
         self.printUrls = printUrls
         self.rawOutput = rawOutput
         self.output = ""
-        if pastebin:
-            self.Print = self.paste_printer
         self.onlyCount = onlyCount
         self.cveCount = 0
         if wrapWidth == 1:
@@ -427,14 +445,6 @@ class RHSecApiParse:
             self.w = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ", replace_whitespace=False)
         else:
             self.w = 0
-
-    def Print(self, text):
-        """Print text to stdout."""
-        print(text, end="")
-
-    def paste_printer(self, text):
-        """Append text to buffer for later pastebin."""
-        self.output += text
 
     def get_terminal_width(self):
         h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
@@ -489,6 +499,7 @@ class RHSecApiParse:
 
     def print_cve(self, cve):
         """Print CVE data."""
+        out = []
         try:
             requrl, j = self.rhsda.get_cve(cve)
         except requests.exceptions.ConnectionError as e:
@@ -498,10 +509,10 @@ class RHSecApiParse:
         except requests.exceptions.HTTPError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
             if not self.onlyCount:
-                self.Print("{0}\n Not present in Red Hat CVE database\n".format(cve))
+                out.append("{0}\n Not present in Red Hat CVE database\n".format(cve))
                 if cve.startswith("CVE-"):
-                    self.Print(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
-            return
+                    out.append(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
+            return "".join(out), False
         except requests.exceptions.RequestException as e:
             print("{0}: {1}".format(prog, e), file=stderr)
             err_print_support_urls()
@@ -509,13 +520,12 @@ class RHSecApiParse:
 
         # If --count was used, done
         if self.onlyCount:
-            self.cveCount += 1
-            return
+            return "".join(out), True
 
         # If --json was used, done
         if self.rawOutput:
-            self.Print(jprint(j, False) + "\n")
-            return
+            out.append(jprint(j, False) + "\n")
+            return "".join(out), True
 
         # CVE name always printed
         name = ""
@@ -524,57 +534,57 @@ class RHSecApiParse:
         url = ""
         if self.printUrls:
             url = " (https://access.redhat.com/security/cve/{0})".format(cve)
-        self.Print("{0}{1}{2}\n".format(cve, name, url))
+        out.append("{0}{1}{2}\n".format(cve, name, url))
 
         # If --fields='' was used, done
         if not self.desiredFields:
-            return
+            return "".join(out), True
 
         if self._check_field('threat_severity', j):
             url = ""
             if self.printUrls:
                 url = " (https://access.redhat.com/security/updates/classification)"
-            self.Print("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
+            out.append("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
 
         if self._check_field('public_date', j):
-            self.Print("  DATE:  {0}\n".format(j['public_date'].split("T")[0]))
+            out.append("  DATE:  {0}\n".format(j['public_date'].split("T")[0]))
 
         if self._check_field('iava', j):
-            self.Print("  IAVA:")
+            out.append("  IAVA:")
             if self.printUrls:
-                self.Print("\n")
+                out.append("\n")
                 iavas = j['iava'].split(",")
                 for i in iavas:
                     i = i.strip()
                     url = " (https://access.redhat.com/labs/iavmmapper/api/iava/{0})".format(i)
-                    self.Print("   {0}{1}\n".format(i, url))
+                    out.append("   {0}{1}\n".format(i, url))
             else:
-                self.Print("  {0}\n".format(j['iava']))
+                out.append("  {0}\n".format(j['iava']))
 
         if self._check_field('cwe', j):
-            self.Print("  CWE:  {0}".format(j['cwe']))
+            out.append("  CWE:  {0}".format(j['cwe']))
             if self.printUrls:
                 cwes = re.findall("CWE-[0-9]+", j['cwe'])
                 if len(cwes) == 1:
-                    self.Print(" (http://cwe.mitre.org/data/definitions/{0}.html)\n".format(cwes[0].lstrip("CWE-")))
+                    out.append(" (http://cwe.mitre.org/data/definitions/{0}.html)\n".format(cwes[0].lstrip("CWE-")))
                 else:
-                    self.Print("\n")
+                    out.append("\n")
                     for c in cwes:
-                        self.Print("   http://cwe.mitre.org/data/definitions/{0}.html\n".format(c.lstrip("CWE-")))
+                        out.append("   http://cwe.mitre.org/data/definitions/{0}.html\n".format(c.lstrip("CWE-")))
             else:
-                self.Print("\n")
+                out.append("\n")
 
         if self._check_field('cvss', j):
             cvss_scoring_vector = j['cvss']['cvss_scoring_vector']
             if self.printUrls:
                 cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector={0}".format(cvss_scoring_vector)
-            self.Print("  CVSS:  {0} ({1})\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
+            out.append("  CVSS:  {0} ({1})\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
 
         if self._check_field('cvss3', j):
             cvss3_scoring_vector = j['cvss3']['cvss3_scoring_vector']
             if self.printUrls:
                 cvss3_scoring_vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(cvss3_scoring_vector)
-            self.Print("  CVSS3:  {0} ({1})\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
+            out.append("  CVSS3:  {0} ({1})\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
 
         if 'bugzilla' in self.desiredFields:
             if j.has_key('bugzilla'):
@@ -582,31 +592,31 @@ class RHSecApiParse:
                     bug = j['bugzilla']['url']
                 else:
                     bug = j['bugzilla']['id']
-                self.Print("  BUGZILLA:  {0}\n".format(bug))
+                out.append("  BUGZILLA:  {0}\n".format(bug))
             else:
-                self.Print("  BUGZILLA:  No Bugzilla data\n")
-                self.Print("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy\n")
+                out.append("  BUGZILLA:  No Bugzilla data\n")
+                out.append("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy\n")
 
         if self._check_field('acknowledgement', j):
-            self.Print("  ACKNOWLEDGEMENT:  {0}\n".format(self._stripjoin(j['acknowledgement'])))
+            out.append("  ACKNOWLEDGEMENT:  {0}\n".format(self._stripjoin(j['acknowledgement'])))
 
         if self._check_field('details', j):
-            self.Print("  DETAILS:  {0}\n".format(self._stripjoin(j['details'])))
+            out.append("  DETAILS:  {0}\n".format(self._stripjoin(j['details'])))
 
         if self._check_field('statement', j):
-            self.Print("  STATEMENT:  {0}\n".format(self._stripjoin(j['statement'])))
+            out.append("  STATEMENT:  {0}\n".format(self._stripjoin(j['statement'])))
 
         if self._check_field('mitigation', j):
-            self.Print("  MITIGATION:  {0}\n".format(self._stripjoin(j['mitigation'])))
+            out.append("  MITIGATION:  {0}\n".format(self._stripjoin(j['mitigation'])))
 
         if self._check_field('upstream_fix', j):
-            self.Print("  UPSTREAM_FIX:  {0}\n".format(j['upstream_fix']))
+            out.append("  UPSTREAM_FIX:  {0}\n".format(j['upstream_fix']))
 
         if self._check_field('references', j):
-            self.Print("  REFERENCES:{0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
+            out.append("  REFERENCES:{0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
 
         if self._check_field('affected_release', j):
-            self.Print("  AFFECTED_RELEASE (ERRATA):\n")
+            out.append("  AFFECTED_RELEASE (ERRATA):\n")
             affected_release = j['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
@@ -618,10 +628,10 @@ class RHSecApiParse:
                 advisory = release['advisory']
                 if self.printUrls:
                     advisory = "https://access.redhat.com/errata/{0}".format(advisory)
-                self.Print("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
+                out.append("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
 
         if self._check_field('package_state', j):
-            self.Print("  PACKAGE_STATE:\n")
+            out.append("  PACKAGE_STATE:\n")
             package_state = j['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
@@ -630,10 +640,11 @@ class RHSecApiParse:
                 package_name = ""
                 if state.has_key('package_name'):
                     package_name = " [{0}]".format(state['package_name'])
-                self.Print("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
+                out.append("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
 
         # Add one final newline to the end
-        self.Print("\n")
+        out.append("\n")
+        return "".join(out), True
 
 
 def iavm_query(url, progressToStderr=False):
@@ -692,7 +703,10 @@ def get_iava(iavaId, progressToStderr=False, onlyCount=False):
 
 
 def main(opts):
-    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.pastebin, opts.count, opts.verbose, opts.wrapWidth)
+    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.count, opts.verbose, opts.wrapWidth)
+    searchOutput = []
+    iavaOutput = []
+    cveOutput = []
     if opts.doSearch:
         result = a.search_query(opts.searchParams)
         if opts.extract_search:
@@ -701,10 +715,13 @@ def main(opts):
                     opts.cves.append(i['CVE'])
         elif not opts.count:
             if opts.json:
-                a.Print(jprint(result, False) + "\n")
+                searchOutput.append(jprint(result, False) + "\n")
             else:
                 for cve in result:
-                    a.Print(cve['CVE'] + "\n")
+                    searchOutput.append(cve['CVE'] + "\n")
+            searchOutput.append("\n")
+            if not opts.pastebin:
+                print("".join(searchOutput))
     elif opts.q_iava:
         result = get_iava(opts.q_iava, opts.verbose, opts.count)
         if opts.extract_search:
@@ -712,20 +729,27 @@ def main(opts):
                 opts.cves.extend(result['IAVM']['CVEs']['CVENumber'])
         elif not opts.count:
             if opts.json:
-                a.Print(jprint(result, False) + "\n")
+                iavaOutput.append(jprint(result, False) + "\n")
             else:
                 for cve in result['IAVM']['CVEs']['CVENumber']:
-                    a.Print(cve + "\n")
+                    iavaOutput.append(cve + "\n")
+            iavaOutput.append("\n")
+            if not opts.pastebin:
+                print("".join(iavaOutput))
     if opts.cves:
-        for cve in opts.cves:
-            a.print_cve(cve)
-        if opts.count:
-            total = len(opts.cves)
-            valid = a.cveCount
-            invalid = total - valid
-            print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid, total), file=stderr)
-            if invalid > 0:
-                print("Invalid CVE queries: {0} of {1}".format(invalid, total), file=stderr)
+        pool = multiprocessing.Pool(opts.threads)
+        results = pool.map(a.print_cve, opts.cves)
+        pool.close()
+        pool.join()
+        cveOutput, successValues = zip(*results)
+        total = len(opts.cves)
+        valid = successValues.count(True)
+        print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid, total), file=stderr)
+        if valid != total:
+            print("Invalid CVE queries: {0} of {1}".format(successValues.count(False), total), file=stderr)
+        print(file=stderr)
+    if opts.count:
+        return
     if opts.pastebin:
         opts.p_lang = 'text'
         if opts.json or not opts.cves:
@@ -733,7 +757,11 @@ def main(opts):
         opts.p_password = None
         opts.p_private = 'yes'
         opts.p_project = None
-        fpaste_it(a.output, opts.p_lang, opts.p_user, opts.p_password, opts.p_private, opts.p_expire, opts.p_project)
+        data = "".join(searchOutput) + "".join(iavaOutput) + "".join(cveOutput)
+        fpaste_it(data, opts.p_lang, opts.p_user, opts.p_password, opts.p_private, opts.p_expire, opts.p_project)
+    else:
+        print("".join(cveOutput), end="")
+    
 
 
 if __name__ == "__main__":
