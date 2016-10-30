@@ -774,9 +774,22 @@ def main(opts):
             searchOutput.append("\n")
         if iavaOutput:
             iavaOutput.append("\n")
+        # Disable sigint before starting process pool
+        import signal
+        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
         pool = multiprocessing.Pool(opts.threads)
-        results = pool.map(a.print_cve, opts.cves)
-        pool.close()
+        # Re-enable receipt of sigint
+        signal.signal(signal.SIGINT, original_sigint_handler)
+        try:
+            p = pool.map_async(a.print_cve, opts.cves)
+            # Need to specify timeout; see: http://stackoverflow.com/a/35134329
+            results = p.get(300)
+        except KeyboardInterrupt:
+            print("\n{0}: Received KeyboardInterrupt; terminating http request-workers".format(prog))
+            pool.terminate()
+            exit()
+        else:
+            pool.close()
         pool.join()
         cveOutput, successValues = zip(*results)
         total = len(opts.cves)
@@ -812,7 +825,7 @@ if __name__ == "__main__":
         opts = parse_args()
         main(opts)
     except KeyboardInterrupt:
-        print("\nReceived KeyboardInterrupt. Exiting.")
+        print("\n{0}: Received KeyboardInterrupt; exiting".format(prog))
         exit()
 else:
     a = RedHatSecDataApiClient(True)
