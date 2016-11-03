@@ -21,7 +21,7 @@ import argparse
 from sys import exit, stderr
 import requests, json, re
 import textwrap, fcntl, termios, struct
-import multiprocessing
+import multiprocessing.dummy as multiprocessing
 import copy_reg
 import types
 
@@ -39,9 +39,9 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.6.11'
-vers['date'] = '2016/10/30'
-# Set default number of workers to use
+vers['version'] = '0.7.0'
+vers['date'] = '2016/11/03'
+# Set default number of worker threads to use
 cpuCount = multiprocessing.cpu_count() + 1
 # Supported CVE fields
 allFields = ['threat_severity',
@@ -278,65 +278,65 @@ def parse_args():
     g_listByAttr = p.add_argument_group(
         'FIND CVES BY ATTRIBUTE')
     g_listByAttr.add_argument(
-        '--q-before', metavar='YEAR-MM-DD',
+        '--q-before', metavar="YEAR-MM-DD",
         help="Narrow down results to before a certain time period")
     g_listByAttr.add_argument(
-        '--q-after', metavar='YEAR-MM-DD',
+        '--q-after', metavar="YEAR-MM-DD",
         help="Narrow down results to after a certain time period")
     g_listByAttr.add_argument(
-        '--q-bug', metavar='BZID',
+        '--q-bug', metavar="BZID",
         help="Narrow down results by Bugzilla ID (specify one or more, e.g.: '1326598,1084875')")
     g_listByAttr.add_argument(
-        '--q-advisory', metavar='RHSA',
+        '--q-advisory', metavar="RHSA",
         help="Narrow down results by errata advisory (specify one or more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')")
     g_listByAttr.add_argument(
-        '--q-severity', metavar='IMPACT', choices=['low', 'moderate', 'important', 'critical'],
+        '--q-severity', metavar="IMPACT", choices=['low', 'moderate', 'important', 'critical'],
         help="Narrow down results by severity rating (specify one of 'low', 'moderate', 'important', or 'critical')")
     g_listByAttr.add_argument(
-        '--q-package', metavar='PKG',
+        '--q-package', metavar="PKG",
         help="Narrow down results by package name (e.g.: 'samba' or 'thunderbird')")
     g_listByAttr.add_argument(
-        '--q-cwe', metavar='CWEID',
+        '--q-cwe', metavar="CWEID",
         help="Narrow down results by CWE ID (specify one or more, e.g.: '295,300')")
     g_listByAttr.add_argument(
-        '--q-cvss', metavar='SCORE',
+        '--q-cvss', metavar="SCORE",
         help="Narrow down results by CVSS base score (e.g.: '8.0')")
     g_listByAttr.add_argument(
-        '--q-cvss3', metavar='SCORE',
+        '--q-cvss3', metavar="SCORE",
         help="Narrow down results by CVSSv3 base score (e.g.: '5.1')")
     g_listByAttr.add_argument(
         '--q-empty', action='store_true',
         help="Allow performing an empty search; when used with no other --q-xxx options, this will return the first 1000 of the most recent CVEs (subject to below PAGESZ & PAGENUM)")
     g_listByAttr.add_argument(
-        '--q-pagesize', metavar='PAGESZ', type=int,
+        '--q-pagesize', metavar="PAGESZ", type=int,
         help="Set a cap on the number of results that will be returned (default: 1000)")
     g_listByAttr.add_argument(
-        '--q-pagenum', metavar='PAGENUM', type=int,
+        '--q-pagenum', metavar="PAGENUM", type=int,
         help="Select what page number to return (default: 1); only relevant when there are more than PAGESZ results")
     g_listByAttr.add_argument(
-        '--q-raw', metavar='RAWQUERY', action='append',
+        '--q-raw', metavar="RAWQUERY", action='append',
         help="Narrow down results by RAWQUERY (e.g.: '--q-raw a=x --q-raw b=y'); this allows passing arbitrary params (e.g. something new that is unsupported by {0})".format(prog))
     # New group
     g_listByIava = p.add_argument_group(
         'FIND CVES BY IAVA')
     g_listByIava.add_argument(
-        '--q-iava', metavar='IAVA',
+        '--q-iava', metavar="IAVA",
         help="Narrow down results by IAVA number (e.g.: '2016-A-0293'); note however that this feature is not provided by the Red Hat Security Data API and thus: (1) it requires login to the Red Hat Customer Portal and (2) it cannot be used in concert with any of the above search parameters")
     # New group
     g_getCve = p.add_argument_group(
         'QUERY SPECIFIC CVES')
     g_getCve.add_argument(
         '-x', '--extract-search', action='store_true',
-        help="Determine what CVEs to query by extracting them from above search query (as initiated by at least one of the --q-xxx options); this option suppresses usual JSON result of search queries")
-    g_getCve.add_argument('cves', metavar='CVE', nargs='*',
+        help="Determine what CVEs to query by extracting them from above search query (as initiated by at least one of the --q-xxx options); note that this can be used at the same time as manually specifying CVEs on cmdline (below)")
+    g_getCve.add_argument('cves', metavar="CVE", nargs='*',
         help="Retrieve a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
     # New group
     g_cveDisplay = p.add_argument_group(
         'CVE DISPLAY OPTIONS')
     g_cveDisplay0 = g_cveDisplay.add_mutually_exclusive_group()
     g_cveDisplay0.add_argument(
-        '-f', '--fields', metavar='+FIELDS', default=','.join(defaultFields),
-        help="Comma-separated fields to be displayed (default: {0}); optionally prepend with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3')".format(", ".join(defaultFields)))
+        '-f', '--fields', metavar="FIELDS", default=','.join(defaultFields),
+        help="Comma-separated fields to be displayed (default: {0}); optionally prepend with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3') or a caret (^) to remove fields from the default (e.g., '-f ^bugzilla,threat_severity')".format(", ".join(defaultFields)))
     g_cveDisplay0.add_argument(
         '-a', '--all-fields', dest='fields', action='store_const',
         const=','.join(allFields),
@@ -355,8 +355,8 @@ def parse_args():
     g_general = p.add_argument_group(
         'GENERAL OPTIONS')
     g_general.add_argument(
-        '-w', '--wrap', metavar='WIDTH', dest='wrapWidth', nargs='?', default=1, const=70, type=int,
-        help="Change wrap-width of long fields (acknowledgement, details, statement) in non-json output (default: wrapping with WIDTH equivalent to TERMWIDTH-2; specify '0' to disable wrapping; WIDTH defaults to '70' if option is used but WIDTH is omitted")
+        '-w', '--wrap', metavar="WIDTH", dest='wrapWidth', nargs='?', default=1, const=70, type=int,
+        help="Change wrap-width of long fields (acknowledgement, details, statement, mitigation) in non-json output (default: wrapping WIDTH equivalent to TERMWIDTH-2 unless using '--pastebin' where default WIDTH is '168'; specify '0' to disable wrapping; WIDTH defaults to '70' if option is used but WIDTH is omitted)")
     g_general.add_argument(
         '-c', '--count', action='store_true',
         help="Print a count of the number of entities found")
@@ -364,29 +364,29 @@ def parse_args():
         '-v', '--verbose', action='store_true',
         help="Print API urls to stderr")
     g_general.add_argument(
-        '-W', '--workers', metavar='N', type=int, default=cpuCount,
-        help="Set number of concurrent worker processes to allow when making CVE queries (default on this system: {0})".format(cpuCount))
+        '-t', '--threads', metavar="THREDS", type=int, default=cpuCount,
+        help="Set number of concurrent worker threads to allow when making CVE queries (default on this system: {0})".format(cpuCount))
     g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
     # g_general.add_argument(
-    #     '--p-lang', metavar='LANG', default='text',
+    #     '--p-lang', metavar="LANG", default='text',
     #     choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
     #     help="Set the development language for the paste (default: 'text')")
     # g_general.add_argument(
-    #     '-A', '--p-author', metavar='NAME', default=prog,
+    #     '-A', '--p-author', metavar="NAME", default=prog,
     #     help="Set alphanumeric paste author (default: '{0}')".format(prog))
     # g_general.add_argument(
-    #     '--p-password', metavar='PASSWD',
+    #     '--p-password', metavar="PASSWD",
     #     help="Set password string to protect paste")
     # g_general.add_argument(
     #     '--p-public', dest='p_private', default='yes', action='store_const', const='no',
     #     help="Set paste to be publicly-discoverable")
     g_general.add_argument(
-        '-E', '--pexpire', metavar='DAYS', nargs='?', const=2, default=28, type=int,
-        help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '2' if option is used but DAYS is omitted)")
+        '-E', '--pexpire', metavar="DAYS", nargs='?', const=1, default=28, type=int,
+        help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '1' if option is used but DAYS is omitted)")
     # g_general.add_argument(
-    #     '--p-project', metavar='PROJECT',
+    #     '--p-project', metavar="PROJECT",
     #     help="Associate paste with a project")
     g_general.add_argument(
         '-h', dest='showUsage', action='store_true',
@@ -424,6 +424,7 @@ def parse_args():
         for param in o.q_raw:
             p = param.split("=")
             o.searchParams[p[0]] = p[1]
+    # Check for search params (--q-xxx) to determine if performing search
     if all(val is None for val in o.searchParams.values()) and not o.q_empty:
         o.doSearch = False
     else:
@@ -431,14 +432,37 @@ def parse_args():
     if o.q_iava and o.doSearch:
         print("{0}: The --q-iava option is not compatible with other --q-xxx options; it can only be used alone".format(prog), file=stderr)
         exit(1)
+    # If only one CVE (common use-case), let's validate its format
     if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
         o.showUsage = True
+    # Show usage if no search (--q-xxx) and no CVEs mentioned
     if o.showUsage or not (o.doSearch or o.cves or o.q_iava):
         p.print_usage()
         print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
-    if o.fields.startswith('+'):
-        o.fields = '{0},{1}'.format(','.join(defaultFields), o.fields[1:])
+    # Let's validate our fields; start by saving to a list
+    if o.fields.startswith('+') or o.fields.startswith('^'):
+        fields = o.fields[1:].split(',')
+    else:
+        fields = o.fields.split(',')
+    for f in fields:
+        # If a field isn't known, exit
+        if f not in allFields:
+            print("{0}: Field '{1}' is not a supported field; valid fields:\n"
+                  "{2}".format(prog, f, ", ".join(allFields)), file=stderr)
+            exit(1)
+        # If using '--fields -xxx' format, remove
+        if o.fields.startswith('^') and f in defaultFields:
+            defaultFields.remove(f)
+        # If using '--fields +xxx' format, add
+        elif o.fields.startswith('+'):
+            defaultFields.append(f)
+    # If we added/removed, we need to reset o.fields to new value
+    if o.fields.startswith('+') or o.fields.startswith('^'):
+        o.fields = ','.join(defaultFields)
+    # If autowrap and using pastebin, set good width
+    if o.wrapWidth == 1 and o.pastebin:
+        o.wrapWidth = 168
     return o
 
 
@@ -525,11 +549,12 @@ class RHSecApiParse:
         else:
             text = input.encode('utf-8').strip()
         if oneLineEach:
+            text = "\n" + text
             text = re.sub(r"\n+", "\n   ", text)
         else:
             text = re.sub(r"\n+", "  ", text)
-        if self.w:
-            text = "\n" + "\n".join(self.w.wrap(text))
+            if self.w:
+                text = "\n" + "\n".join(self.w.wrap(text))
         return text
 
     def print_cve(self, cve):
@@ -770,6 +795,8 @@ def main(opts):
             if not opts.pastebin:
                 print("".join(iavaOutput))
     if opts.cves:
+        if opts.verbose:
+            print("DEBUG FIELDS: '{0}'".format(opts.fields), file=stderr)
         if searchOutput:
             searchOutput.append("\n")
         if iavaOutput:
@@ -777,7 +804,7 @@ def main(opts):
         # Disable sigint before starting process pool
         import signal
         original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-        pool = multiprocessing.Pool(opts.workers)
+        pool = multiprocessing.Pool(processes=opts.threads)
         # Re-enable receipt of sigint
         signal.signal(signal.SIGINT, original_sigint_handler)
         try:
@@ -785,7 +812,7 @@ def main(opts):
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(300)
         except KeyboardInterrupt:
-            print("\n{0}: Received KeyboardInterrupt; terminating http request-workers".format(prog))
+            print("\n{0}: Received KeyboardInterrupt; terminating http request-worker threads".format(prog))
             pool.terminate()
             exit()
         else:
