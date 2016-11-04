@@ -24,7 +24,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-f FIELDS | -a | -m] [-j] [-u]
+                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
                 [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
                 [--help]
                 [CVE [CVE ...]]
@@ -32,11 +32,13 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.7.0 last mod 2016/11/03
+  rhsecapi v0.8.0 last mod 2016/11/04
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
 ## Simple CVE retrieval
+
+Specify as many CVEs on cmdline as needed; certain details are printed to stderr -- e.g., in the following, the first 4 lines of output were sent to stderr
 
 ```
 $ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298
@@ -73,6 +75,8 @@ CVE-2010-5298
    Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
+A `--urls` or `-u` option adds URLS
+
 ```
 $ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298 --urls 2>/dev/null
 CVE-2004-0230 (https://access.redhat.com/security/cve/CVE-2004-0230)
@@ -104,45 +108,66 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
    Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
-Note that the CVE retrieval process is multi-threaded
+CVEs can also be extracted from stdin with `--extract-stdin` (`-s`); note that the following examples use `--count` for the sake of brevity
+
+First example: pasting newline-separated CVEs with shell heredoc redirection
 
 ```
+$ rhsecapi --extract-stdin --count <<EOF
+> CVE-2016-5630 
+> CVE-2016-5631 
+> CVE-2016-5632 
+> CVE-2016-5633 
+> CVE-2016-5634 
+> CVE-2016-5635 
+> EOF
+rhsecapi: Found 6 CVEs in stdin; 0 duplicates removed
+
+Valid Red Hat CVE results retrieved: 6 of 6
+```
+
+Second example: piping in a file
+
+```
+$ cat scan-results.csv | rhsecapi -s -c
+rhsecapi: Found 150 CVEs in stdin; 698 duplicates removed
+
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-3197.json
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
+Valid Red Hat CVE results retrieved: 148 of 150
+Invalid CVE queries: 2 of 150
+```
+
+The CVE retrieval process is multi-threaded; with CPUcount < 4, it defaults to 4 threads; with CPUcount > 4, it defaults to `CPUcount * 2` 
+
+```
+$ grep processor /proc/cpuinfo | wc -l
+4
+
 $ rhsecapi --help | grep -A1 threads
   -t, --threads THREDS  Set number of concurrent worker threads to allow when
-                        making CVE queries (default on this system: 5)
+                        making CVE queries (default on this system: 8)
 
-$ time rhsecapi --q-empty --q-pagesize 10 --extract-search --verbose >/dev/null
-Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?per_page=10' ...
-CVEs found: 10
+$ time rhsecapi --q-empty --q-pagesize 48 --extract-search >/dev/null
+CVEs found: 48
 
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state'
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8634.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-7035.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8615.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8625.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8619.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8624.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8623.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8622.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8620.json' ...
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8616.json' ...
-Valid Red Hat CVE results retrieved: 10 of 10
+Valid Red Hat CVE results retrieved: 48 of 48
 
-real	0m2.502s
-user	0m0.242s
-sys	0m0.038s
+real	0m3.197s
+user	0m0.613s
+sys	0m0.077s
 ```
 
 ## BASH intelligent tab-completion
 
 ```
 $ rhsecapi --
---all-fields      --most-fields     --q-bug           --q-package       --urls
---count           --pastebin        --q-cvss          --q-pagenum       --verbose
---extract-search  --pexpire         --q-cvss3         --q-pagesize      --wrap
+--all-fields      --json            --q-before        --q-iava          --threads
+--count           --most-fields     --q-bug           --q-package       --urls
+--extract-search  --pastebin        --q-cvss          --q-pagenum       --verbose
+--extract-stdin   --pexpire         --q-cvss3         --q-pagesize      --wrap
 --fields          --q-advisory      --q-cwe           --q-raw           
 --help            --q-after         --q-empty         --q-severity      
---json            --q-before        --q-iava          --threads         
 ```
 
 ## Field display
@@ -151,9 +176,10 @@ Add some fields to the defaults with `--fields +field[,field]...`
 
 ```
 $ rhsecapi CVE-2016-6302 -v --fields +cwe,cvss3
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state,cwe,cvss3'
+DEBUG THREADS: '1'
 Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
 Valid Red Hat CVE results retrieved: 1 of 1
+DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state,cwe,cvss3'
 
 CVE-2016-6302
   IMPACT:  Moderate
@@ -181,9 +207,10 @@ Remove some fields from the defaults with `--fields ^field[,field]...`
 
 ```
 $ rhsecapi CVE-2016-6302 -vf ^package_state,affected_release
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla'
+DEBUG THREADS: '1'
 Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
 Valid Red Hat CVE results retrieved: 1 of 1
+DEBUG FIELDS: 'threat_severity,public_date,bugzilla'
 
 CVE-2016-6302
   IMPACT:  Moderate
@@ -194,10 +221,10 @@ CVE-2016-6302
 Note that there are also two presets: `--all-fields` and `--most-fields`
 
 ```
-$ rhsecapi CVE-2016-6302 -v --most-fields 2>&1 | grep DEBUG
+$ rhsecapi CVE-2016-6302 -v --most-fields 2>&1 | grep FIELDS
 DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,upstream_fix,affected_release,package_state'
 
-$ rhsecapi CVE-2016-6302 -v --all-fields 2>&1 | grep DEBUG
+$ rhsecapi CVE-2016-6302 -v --all-fields 2>&1 | grep FIELDS
 DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,acknowledgement,details,statement,mitigation,upstream_fix,references,affected_release,package_state'
 ```
 
@@ -318,9 +345,10 @@ $ rhsecapi -v --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity cri
 Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-01&severity=critical&package=rhev-hypervisor6' ...
 CVEs found: 1
 
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state'
+DEBUG THREADS: '1'
 Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json' ...
 Valid Red Hat CVE results retrieved: 1 of 1
+DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state'
 
 CVE-2015-0235
   IMPACT:  Critical
@@ -513,7 +541,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-f FIELDS | -a | -m] [-j] [-u]
+                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
                 [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
                 [--help]
                 [CVE [CVE ...]]
@@ -559,13 +587,15 @@ FIND CVES BY IAVA:
                         above search parameters
 
 QUERY SPECIFIC CVES:
-  -x, --extract-search  Determine what CVEs to query by extracting them from
-                        above search query (as initiated by at least one of
-                        the --q-xxx options); note that this can be used at
-                        the same time as manually specifying CVEs on cmdline
-                        (below)
   CVE                   Retrieve a CVE or space-separated list of CVEs (e.g.:
                         'CVE-2016-5387')
+  -x, --extract-search  Extract CVEs them from search query (as initiated by
+                        at least one of the --q-xxx options)
+  -s, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by regex
+                        'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be
+                        discarded); note that auto-detection of terminal width
+                        is not possible in this mode and defaults to a width
+                        of '70' (this can be overridden with '--width' option)
 
 CVE DISPLAY OPTIONS:
   -f, --fields FIELDS   Comma-separated fields to be displayed (default:
@@ -593,9 +623,9 @@ GENERAL OPTIONS:
                         '168'; specify '0' to disable wrapping; WIDTH defaults
                         to '70' if option is used but WIDTH is omitted)
   -c, --count           Print a count of the number of entities found
-  -v, --verbose         Print API urls to stderr
+  -v, --verbose         Print API urls & other debugging info to stderr
   -t, --threads THREDS  Set number of concurrent worker threads to allow when
-                        making CVE queries (default on this system: 5)
+                        making CVE queries (default on this system: 8)
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
   -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
@@ -606,7 +636,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.7.0 last mod 2016/11/03
+  rhsecapi v0.8.0 last mod 2016/11/04
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 

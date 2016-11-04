@@ -18,7 +18,7 @@
 # Modules from standard library
 from __future__ import print_function
 import argparse
-from sys import exit, stderr
+from sys import exit, stderr, stdin
 import requests, json, re
 import textwrap, fcntl, termios, struct
 import multiprocessing.dummy as multiprocessing
@@ -39,10 +39,13 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.7.0'
-vers['date'] = '2016/11/03'
+vers['version'] = '0.8.0'
+vers['date'] = '2016/11/04'
 # Set default number of worker threads to use
-cpuCount = multiprocessing.cpu_count() + 1
+if multiprocessing.cpu_count() < 4:
+    defaultThreads = 4
+else:
+    defaultThreads = multiprocessing.cpu_count() * 2
 # Supported CVE fields
 allFields = ['threat_severity',
              'public_date',
@@ -326,10 +329,14 @@ def parse_args():
     g_getCve = p.add_argument_group(
         'QUERY SPECIFIC CVES')
     g_getCve.add_argument(
-        '-x', '--extract-search', action='store_true',
-        help="Determine what CVEs to query by extracting them from above search query (as initiated by at least one of the --q-xxx options); note that this can be used at the same time as manually specifying CVEs on cmdline (below)")
-    g_getCve.add_argument('cves', metavar="CVE", nargs='*',
+        'cves', metavar="CVE", nargs='*',
         help="Retrieve a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
+    g_getCve.add_argument(
+        '-x', '--extract-search', action='store_true',
+        help="Extract CVEs them from search query (as initiated by at least one of the --q-xxx options)")
+    g_getCve.add_argument(
+        '-s', '--extract-stdin', action='store_true',
+        help="Extract CVEs from stdin (CVEs will be matched by regex 'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be discarded); note that auto-detection of terminal width is not possible in this mode and defaults to a width of '70' (this can be overridden with '--width' option)")
     # New group
     g_cveDisplay = p.add_argument_group(
         'CVE DISPLAY OPTIONS')
@@ -362,10 +369,10 @@ def parse_args():
         help="Print a count of the number of entities found")
     g_general.add_argument(
         '-v', '--verbose', action='store_true',
-        help="Print API urls to stderr")
+        help="Print API urls & other debugging info to stderr")
     g_general.add_argument(
-        '-t', '--threads', metavar="THREDS", type=int, default=cpuCount,
-        help="Set number of concurrent worker threads to allow when making CVE queries (default on this system: {0})".format(cpuCount))
+        '-t', '--threads', metavar="THREDS", type=int, default=defaultThreads,
+        help="Set number of concurrent worker threads to allow when making CVE queries (default on this system: {0})".format(defaultThreads))
     g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
@@ -432,6 +439,21 @@ def parse_args():
     if o.q_iava and o.doSearch:
         print("{0}: The --q-iava option is not compatible with other --q-xxx options; it can only be used alone".format(prog), file=stderr)
         exit(1)
+    if o.extract_stdin and not stdin.isatty():
+        rx = re.compile('CVE-[0-9]{4}-[0-9]{4,}')
+        found = []
+        for line in stdin:
+            # Iterate over each line of stdin adding the returned list to our found list
+            found.extend(rx.findall(line))
+        if found:
+            matchCount = len(found)
+            # Converting to a set removes duplicates
+            found = list(set(found))
+            uniqueCount = len(found)
+            print("{0}: Found {1} CVEs in stdin; {2} duplicates removed\n".format(prog, uniqueCount, matchCount-uniqueCount), file=stderr)
+            o.cves.extend(found)
+        else:
+            print("{0}: No CVEs (matching regex: 'CVE-[0-9]{{4}}-[0-9]{{4,}}') found in stdin\n".format(prog), file=stderr)
     # If only one CVE (common use-case), let's validate its format
     if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
         o.showUsage = True
@@ -499,7 +521,10 @@ class RHSecApiParse:
         self.onlyCount = onlyCount
         self.cveCount = 0
         if wrapWidth == 1:
-            wrapWidth = self.get_terminal_width() - 2
+            if stdin.isatty:
+                wrapWidth = 70
+            else:
+                wrapWidth = self.get_terminal_width() - 2
         if wrapWidth:
             self.w = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ", replace_whitespace=False)
         else:
@@ -795,8 +820,10 @@ def main(opts):
             if not opts.pastebin:
                 print("".join(iavaOutput))
     if opts.cves:
+        if opts.threads > len(opts.cves):
+            opts.threads = len(opts.cves)
         if opts.verbose:
-            print("DEBUG FIELDS: '{0}'".format(opts.fields), file=stderr)
+            print("DEBUG THREADS: '{0}'".format(opts.threads), file=stderr)
         if searchOutput:
             searchOutput.append("\n")
         if iavaOutput:
@@ -812,7 +839,7 @@ def main(opts):
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(300)
         except KeyboardInterrupt:
-            print("\n{0}: Received KeyboardInterrupt; terminating http request-worker threads".format(prog))
+            print("\n{0}: Received KeyboardInterrupt; terminating http request-worker threads".format(prog), file=stderr)
             pool.terminate()
             exit()
         else:
@@ -824,9 +851,11 @@ def main(opts):
         print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid, total), file=stderr)
         if valid != total:
             print("Invalid CVE queries: {0} of {1}".format(successValues.count(False), total), file=stderr)
-        print(file=stderr)
     if opts.count:
         return
+    if opts.verbose and opts.cves:
+        print("DEBUG FIELDS: '{0}'".format(opts.fields), file=stderr)
+    print(file=stderr)
     if opts.pastebin:
         opts.p_lang = 'text'
         if opts.json or not opts.cves:
