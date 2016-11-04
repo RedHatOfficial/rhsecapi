@@ -39,7 +39,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.8.0'
+vers['version'] = '0.8.1'
 vers['date'] = '2016/11/04'
 # Set default number of worker threads to use
 if multiprocessing.cpu_count() < 4:
@@ -521,10 +521,11 @@ class RHSecApiParse:
         self.onlyCount = onlyCount
         self.cveCount = 0
         if wrapWidth == 1:
-            if stdin.isatty:
-                wrapWidth = 70
-            else:
+            if stdin.isatty():
                 wrapWidth = self.get_terminal_width() - 2
+            else:
+                print("{0}: Unable to auto-detect terminal width due to stdin redirection; setting WIDTH to 70".format(prog), file=stderr)
+                wrapWidth = 70
         if wrapWidth:
             self.w = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ", replace_whitespace=False)
         else:
