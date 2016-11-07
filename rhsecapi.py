@@ -39,8 +39,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.8.1'
-vers['date'] = '2016/11/04'
+vers['version'] = '0.8.2'
+vers['date'] = '2016/11/06'
 # Set default number of worker threads to use
 if multiprocessing.cpu_count() < 4:
     defaultThreads = 4
@@ -332,10 +332,10 @@ def parse_args():
         'cves', metavar="CVE", nargs='*',
         help="Retrieve a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
     g_getCve.add_argument(
-        '-x', '--extract-search', action='store_true',
+        '-s', '--extract-search', action='store_true',
         help="Extract CVEs them from search query (as initiated by at least one of the --q-xxx options)")
     g_getCve.add_argument(
-        '-s', '--extract-stdin', action='store_true',
+        '-0', '--extract-stdin', action='store_true',
         help="Extract CVEs from stdin (CVEs will be matched by regex 'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be discarded); note that auto-detection of terminal width is not possible in this mode and defaults to a width of '70' (this can be overridden with '--width' option)")
     # New group
     g_cveDisplay = p.add_argument_group(

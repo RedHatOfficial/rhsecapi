@@ -24,7 +24,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m] [-j] [-u]
                 [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
                 [--help]
                 [CVE [CVE ...]]
@@ -32,7 +32,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.8.0 last mod 2016/11/04
+  rhsecapi v0.8.2 last mod 2016/11/06
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
@@ -108,7 +108,7 @@ CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
    Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
-CVEs can also be extracted from stdin with `--extract-stdin` (`-s`); note that the following examples use `--count` for the sake of brevity
+CVEs can also be extracted from stdin with `--extract-stdin` (`-0`); note that the following examples use `--count` for the sake of brevity
 
 First example: pasting newline-separated CVEs with shell heredoc redirection
 
@@ -129,7 +129,7 @@ Valid Red Hat CVE results retrieved: 6 of 6
 Second example: piping in a file
 
 ```
-$ cat scan-results.csv | rhsecapi -s -c
+$ cat scan-results.csv | rhsecapi -0 -c
 rhsecapi: Found 150 CVEs in stdin; 698 duplicates removed
 
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-3197.json
@@ -229,7 +229,7 @@ DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,acknowle
 ```
 
 ## Find CVEs
-The `--q-xxx` options can be combined to craft a search, listing CVEs via a single API call; add `--extract-search` (`-x`) to perform individual CVE queries against each CVE returned by the search 
+The `--q-xxx` options can be combined to craft a search, listing CVEs via a single API call; add `--extract-search` (`-s`) to perform individual CVE queries against each CVE returned by the search 
 
 ### Empty search: list CVEs by public-date
 
@@ -505,7 +505,7 @@ CVE-2016-5604
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 -x -u -f affected_release
+$ rhsecapi --q-iava 2016-A-0287 -s -u -f affected_release
 CVEs found: 4
 
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
@@ -541,7 +541,7 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m] [-j] [-u]
                 [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
                 [--help]
                 [CVE [CVE ...]]
@@ -589,9 +589,9 @@ FIND CVES BY IAVA:
 QUERY SPECIFIC CVES:
   CVE                   Retrieve a CVE or space-separated list of CVEs (e.g.:
                         'CVE-2016-5387')
-  -x, --extract-search  Extract CVEs them from search query (as initiated by
+  -s, --extract-search  Extract CVEs them from search query (as initiated by
                         at least one of the --q-xxx options)
-  -s, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by regex
+  -0, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by regex
                         'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be
                         discarded); note that auto-detection of terminal width
                         is not possible in this mode and defaults to a width
@@ -636,7 +636,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.8.0 last mod 2016/11/04
+  rhsecapi v0.8.2 last mod 2016/11/06
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
