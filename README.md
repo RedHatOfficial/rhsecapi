@@ -24,15 +24,15 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
-                [--help]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
+                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
+                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.8.0 last mod 2016/11/04
+  rhsecapi v0.8.2 last mod 2016/11/06
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
@@ -41,10 +41,43 @@ VERSION:
 Specify as many CVEs on cmdline as needed; certain details are printed to stderr -- e.g., in the following, the first 4 lines of output were sent to stderr
 
 ```
-$ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298
+$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
-Valid Red Hat CVE results retrieved: 2 of 3
-Invalid CVE queries: 1 of 3
+Valid Red Hat CVE results retrieved: 3 of 4
+Invalid CVE queries: 1 of 4
+
+CVE-2013-4113
+  IMPACT:  Critical
+  DATE:  2013-07-11
+  BUGZILLA:  983689
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 5 [php-5.1.6-40.el5_9]: RHSA-2013:1049
+   Red Hat Enterprise Linux 5 [php53-5.3.3-13.el5_9.1]: RHSA-2013:1050
+   Red Hat Enterprise Linux 6 [php-5.3.3-23.el6_4]: RHSA-2013:1049
+   Red Hat Enterprise Linux Extended Lifecycle Support 3 [php-4.3.2-56.ent]: RHSA-2013:1063
+   Red Hat Enterprise Linux Extended Lifecycle Support 4 [php-4.3.9-3.37.el4]: RHSA-2013:1063
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php-5.1.6-27.el5_6.5]: RHSA-2013:1061
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php53-5.3.3-1.el5_6.3]: RHSA-2013:1062
+   Red Hat Enterprise Linux Extended Update Support 6.2 [php-5.3.3-3.el6_2.10]: RHSA-2013:1061
+   Red Hat Enterprise Linux Extended Update Support 6.3 [php-5.3.3-14.el6_3.1]: RHSA-2013:1061
+   Red Hat Enterprise Linux Long Life (v. 5.3 server) [php-5.1.6-23.4.el5_3]: RHSA-2013:1061
+  PACKAGE_STATE:
+   Not affected: Red Hat Enterprise Linux 7 [php]
+
+CVE-2014-3669
+  IMPACT:  Moderate
+  DATE:  2014-09-18
+  BUGZILLA:  1154500
+  AFFECTED_RELEASE (ERRATA):
+   Red Hat Enterprise Linux 5 [php53-5.3.3-26.el5_11]: RHSA-2014:1768
+   Red Hat Enterprise Linux 5 [php-5.1.6-45.el5_11]: RHSA-2014:1824
+   Red Hat Enterprise Linux 6 [php-5.3.3-40.el6_6]: RHSA-2014:1767
+   Red Hat Enterprise Linux 7 [php-5.4.16-23.el7_0.3]: RHSA-2014:1767
+   Red Hat Enterprise Linux Extended Update Support 6.5 [php-5.3.3-27.el6_5.3]: RHSA-2015:0021
+   Red Hat Software Collections 1 for Red Hat Enterprise Linux Server (v. 6) [php54-php-5.4.16-22.el6]: RHSA-2014:1765
+   Red Hat Software Collections 1 for Red Hat Enterprise Linux Server (v. 6) [php55-php-5.5.6-13.el6]: RHSA-2014:1766
+   Red Hat Software Collections 1 for Red Hat Enterprise Linux Server (v. 7) [php54-php-5.4.16-22.el7]: RHSA-2014:1765
+   Red Hat Software Collections 1 for Red Hat Enterprise Linux Server (v. 7) [php55-php-5.5.6-13.el7]: RHSA-2014:1766
 
 CVE-2004-0230
   BUGZILLA:  No Bugzilla data
@@ -53,62 +86,58 @@ CVE-2004-0230
 CVE-2015-4642
  Not present in Red Hat CVE database
  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4642
+```
 
-CVE-2010-5298
+A `--spotlight` option allows spotlighting a particular product via a case-insenstive regex, e.g., here's the same exact command above spotlighting EUS products:
+
+```
+$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --spotlight eus
+rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
+Valid Red Hat CVE results retrieved: 3 of 4
+Results matching spotlight-product option: 2 of 4
+Invalid CVE queries: 1 of 4
+
+CVE-2013-4113
+  IMPACT:  Critical
+  DATE:  2013-07-11
+  BUGZILLA:  983689
+  AFFECTED_RELEASE (ERRATA) MATCHING 'eus':
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php-5.1.6-27.el5_6.5]: RHSA-2013:1061
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php53-5.3.3-1.el5_6.3]: RHSA-2013:1062
+   Red Hat Enterprise Linux Extended Update Support 6.2 [php-5.3.3-3.el6_2.10]: RHSA-2013:1061
+   Red Hat Enterprise Linux Extended Update Support 6.3 [php-5.3.3-14.el6_3.1]: RHSA-2013:1061
+
+CVE-2014-3669
   IMPACT:  Moderate
-  DATE:  2014-04-08
-  BUGZILLA:  1087195
-  AFFECTED_RELEASE (ERRATA)
-   Red Hat Enterprise Linux 6 [openssl-1.0.1e-16.el6_5.14]: RHSA-2014:0625
-   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-34.el7_0.3]: RHSA-2014:0679
-   Red Hat Storage Server 2.1 [openssl-1.0.1e-16.el6_5.14]: RHSA-2014:0628
-  PACKAGE_STATE
-   Not affected: Red Hat JBoss EAP 5 [openssl]
-   Not affected: Red Hat JBoss EAP 6 [openssl]
-   Not affected: Red Hat JBoss EWS 1 [openssl]
-   Not affected: Red Hat JBoss EWS 2 [openssl]
-   Not affected: RHEV-M for Servers [mingw-virt-viewer]
-   Not affected: Red Hat Enterprise Linux 5 [openssl097a]
-   Not affected: Red Hat Enterprise Linux 5 [openssl]
-   Not affected: Red Hat Enterprise Linux 6 [guest-images]
-   Not affected: Red Hat Enterprise Linux 6 [openssl098e]
-   Not affected: Red Hat Enterprise Linux 7 [openssl098e]
+  DATE:  2014-09-18
+  BUGZILLA:  1154500
+  AFFECTED_RELEASE (ERRATA) MATCHING 'eus':
+   Red Hat Enterprise Linux Extended Update Support 6.5 [php-5.3.3-27.el6_5.3]: RHSA-2015:0021
 ```
 
-A `--urls` or `-u` option adds URLS
+A `--urls` or `-u` option adds URLS (and also note that status info is always printed to stderr and can thus be easily separated from normal output)
 
 ```
-$ rhsecapi CVE-2004-0230 CVE-2015-4642 CVE-2010-5298 --urls 2>/dev/null
-CVE-2004-0230 (https://access.redhat.com/security/cve/CVE-2004-0230)
-  BUGZILLA:  No Bugzilla data
-   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy
+$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --spotlight eus --urls 2>/dev/null
+CVE-2013-4113 (https://access.redhat.com/security/cve/CVE-2013-4113)
+  IMPACT:  Critical (https://access.redhat.com/security/updates/classification)
+  DATE:  2013-07-11
+  BUGZILLA:  https://bugzilla.redhat.com/show_bug.cgi?id=983689
+  AFFECTED_RELEASE (ERRATA) MATCHING 'eus':
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php-5.1.6-27.el5_6.5]: https://access.redhat.com/errata/RHSA-2013:1061
+   Red Hat Enterprise Linux EUS (v. 5.6 server) [php53-5.3.3-1.el5_6.3]: https://access.redhat.com/errata/RHSA-2013:1062
+   Red Hat Enterprise Linux Extended Update Support 6.2 [php-5.3.3-3.el6_2.10]: https://access.redhat.com/errata/RHSA-2013:1061
+   Red Hat Enterprise Linux Extended Update Support 6.3 [php-5.3.3-14.el6_3.1]: https://access.redhat.com/errata/RHSA-2013:1061
 
-CVE-2015-4642
- Not present in Red Hat CVE database
- Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4642
-
-CVE-2010-5298 (https://access.redhat.com/security/cve/CVE-2010-5298)
+CVE-2014-3669 (https://access.redhat.com/security/cve/CVE-2014-3669)
   IMPACT:  Moderate (https://access.redhat.com/security/updates/classification)
-  DATE:  2014-04-08
-  BUGZILLA:  https://bugzilla.redhat.com/show_bug.cgi?id=1087195
-  AFFECTED_RELEASE (ERRATA):
-   Red Hat Enterprise Linux 6 [openssl-1.0.1e-16.el6_5.14]: https://access.redhat.com/errata/RHSA-2014:0625
-   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-34.el7_0.3]: https://access.redhat.com/errata/RHSA-2014:0679
-   Red Hat Storage Server 2.1 [openssl-1.0.1e-16.el6_5.14]: https://access.redhat.com/errata/RHSA-2014:0628
-  PACKAGE_STATE:
-   Not affected: Red Hat JBoss EAP 5 [openssl]
-   Not affected: Red Hat JBoss EAP 6 [openssl]
-   Not affected: Red Hat JBoss EWS 1 [openssl]
-   Not affected: Red Hat JBoss EWS 2 [openssl]
-   Not affected: RHEV-M for Servers [mingw-virt-viewer]
-   Not affected: Red Hat Enterprise Linux 5 [openssl097a]
-   Not affected: Red Hat Enterprise Linux 5 [openssl]
-   Not affected: Red Hat Enterprise Linux 6 [guest-images]
-   Not affected: Red Hat Enterprise Linux 6 [openssl098e]
-   Not affected: Red Hat Enterprise Linux 7 [openssl098e]
+  DATE:  2014-09-18
+  BUGZILLA:  https://bugzilla.redhat.com/show_bug.cgi?id=1154500
+  AFFECTED_RELEASE (ERRATA) MATCHING 'eus':
+   Red Hat Enterprise Linux Extended Update Support 6.5 [php-5.3.3-27.el6_5.3]: https://access.redhat.com/errata/RHSA-2015:0021
 ```
 
-CVEs can also be extracted from stdin with `--extract-stdin` (`-s`); note that the following examples use `--count` for the sake of brevity
+CVEs can also be extracted from stdin with `--extract-stdin` (`-0`); note that the following examples use `--count` for the sake of brevity
 
 First example: pasting newline-separated CVEs with shell heredoc redirection
 
@@ -126,10 +155,10 @@ rhsecapi: Found 6 CVEs in stdin; 0 duplicates removed
 Valid Red Hat CVE results retrieved: 6 of 6
 ```
 
-Second example: piping in a file
+Second example: piping in file(s) with `cat|` or file redirection (`< somefile`)
 
 ```
-$ cat scan-results.csv | rhsecapi -s -c
+$ cat scan-results.csv | rhsecapi -0 -c
 rhsecapi: Found 150 CVEs in stdin; 698 duplicates removed
 
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-3197.json
@@ -162,11 +191,11 @@ sys	0m0.077s
 
 ```
 $ rhsecapi --
---all-fields      --json            --q-before        --q-iava          --threads
---count           --most-fields     --q-bug           --q-package       --urls
---extract-search  --pastebin        --q-cvss          --q-pagenum       --verbose
---extract-stdin   --pexpire         --q-cvss3         --q-pagesize      --wrap
---fields          --q-advisory      --q-cwe           --q-raw           
+--all-fields      --json            --q-before        --q-iava          --spotlight
+--count           --most-fields     --q-bug           --q-package       --threads
+--extract-search  --pastebin        --q-cvss          --q-pagenum       --urls
+--extract-stdin   --pexpire         --q-cvss3         --q-pagesize      --verbose
+--fields          --q-advisory      --q-cwe           --q-raw           --wrap
 --help            --q-after         --q-empty         --q-severity      
 ```
 
@@ -229,7 +258,7 @@ DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,acknowle
 ```
 
 ## Find CVEs
-The `--q-xxx` options can be combined to craft a search, listing CVEs via a single API call; add `--extract-search` (`-x`) to perform individual CVE queries against each CVE returned by the search 
+The `--q-xxx` options can be combined to craft a search, listing CVEs via a single API call; add `--extract-search` (`-s`) to perform individual CVE queries against each CVE returned by the search 
 
 ### Empty search: list CVEs by public-date
 
@@ -441,71 +470,33 @@ Invalid CVE queries: 1 of 4
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 --extract-search 
+$ rhsecapi --q-iava 2016-A-0287 --extract-search --spotlight linux.6
 CVEs found: 4
 
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
 Valid Red Hat CVE results retrieved: 3 of 4
+Results matching spotlight-product option: 2 of 4
 Invalid CVE queries: 1 of 4
-
-CVE-2015-7940
-  IMPACT:  Moderate
-  DATE:  2015-09-14
-  BUGZILLA:  1276272
-  AFFECTED_RELEASE (ERRATA):
-   Red Hat Jboss A-MQ 6.3: RHSA-2016:2036
-   Red Hat Jboss Fuse 6.3: RHSA-2016:2035
-  PACKAGE_STATE:
-   Will not fix: Red Hat Satellite 6 [bouncycastle]
-   Will not fix: Red Hat Subscription Asset Manager 1 [bouncycastle]
 
 CVE-2016-2107
   IMPACT:  Moderate
   DATE:  2016-05-03
   BUGZILLA:  1331426
-  AFFECTED_RELEASE (ERRATA):
+  AFFECTED_RELEASE (ERRATA) MATCHING 'linux.6':
    Red Hat Enterprise Linux 6 [openssl-1.0.1e-48.el6_8.1]: RHSA-2016:0996
-   Red Hat Enterprise Linux 7 [openssl-1:1.0.1e-51.el7_2.5]: RHSA-2016:0722
-   Red Hat Enterprise Linux Extended Update Support 6.7 [openssl-1.0.1e-42.el6_7.5]: RHSA-2016:2073
-  PACKAGE_STATE:
-   Not affected: Red Hat JBoss EAP 5 [openssl]
-   Not affected: Red Hat JBoss EAP 6 [openssl]
-   Not affected: Red Hat JBoss EWS 2 [openssl]
-   Affected: Red Hat JBoss Web Server 3.0 [openssl]
-   Not affected: Red Hat Enterprise Linux 4 [openssl096b]
-   Not affected: Red Hat Enterprise Linux 4 [openssl]
-   Not affected: Red Hat Enterprise Linux 5 [openssl097a]
-   Not affected: Red Hat Enterprise Linux 5 [openssl]
+  PACKAGE_STATE MATCHING 'linux.6':
    Not affected: Red Hat Enterprise Linux 6 [openssl098e]
-   Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 
 CVE-2016-4979
   IMPACT:  Moderate
   DATE:  2016-07-05
   BUGZILLA:  1352476
-  AFFECTED_RELEASE (ERRATA):
-   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: RHSA-2016:1420
-   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: RHSA-2016:1420
-  PACKAGE_STATE:
-   Not affected: Red Hat Directory Server 8 [httpd]
-   Not affected: Red Hat JBoss Core Services 1 [jbcs-httpd24-httpd]
-   Not affected: Red Hat JBoss EAP 5 [httpd]
-   Not affected: Red Hat JBoss EAP 6 [httpd22]
-   Not affected: Red Hat JBoss EAP 6 [httpd]
-   Not affected: Red Hat JBoss EWS 1 [httpd]
-   Not affected: Red Hat JBoss EWS 2 [httpd]
-   Not affected: Red Hat JBoss Web Server 3.0 [httpd]
-   Not affected: Red Hat Enterprise Linux 5 [httpd]
+  PACKAGE_STATE MATCHING 'linux.6':
    Not affected: Red Hat Enterprise Linux 6 [httpd]
-   Not affected: Red Hat Enterprise Linux 7 [httpd]
-
-CVE-2016-5604
- Not present in Red Hat CVE database
- Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2016-5604
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 -x -u -f affected_release
+$ rhsecapi --q-iava 2016-A-0287 -s -u -f affected_release
 CVEs found: 4
 
 rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
@@ -541,9 +532,9 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-x] [-s] [-f FIELDS | -a | -m] [-j] [-u]
-                [-w [WIDTH]] [-c] [-v] [-t THREDS] [-p] [-E [DAYS]] [-h]
-                [--help]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
+                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
+                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -589,13 +580,14 @@ FIND CVES BY IAVA:
 QUERY SPECIFIC CVES:
   CVE                   Retrieve a CVE or space-separated list of CVEs (e.g.:
                         'CVE-2016-5387')
-  -x, --extract-search  Extract CVEs them from search query (as initiated by
+  -s, --extract-search  Extract CVEs them from search query (as initiated by
                         at least one of the --q-xxx options)
-  -s, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by regex
-                        'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be
-                        discarded); note that auto-detection of terminal width
-                        is not possible in this mode and defaults to a width
-                        of '70' (this can be overridden with '--width' option)
+  -0, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by case-
+                        insensitive regex 'CVE-[0-9]{4}-[0-9]{4,}' and
+                        duplicates will be discarded); note that terminal
+                        width auto-detection is not possible in this mode and
+                        WIDTH defaults to '70' (but can be overridden with '--
+                        width')
 
 CVE DISPLAY OPTIONS:
   -f, --fields FIELDS   Comma-separated fields to be displayed (default:
@@ -612,6 +604,13 @@ CVE DISPLAY OPTIONS:
   -m, --most-fields     Print all fields mentioned above except the heavy-text
                         ones -- (excluding: acknowledgement, details,
                         statement, mitigation, references)
+  --spotlight PRODUCT   Spotlight a particular PRODUCT via case-insensitive
+                        regex; this hides CVEs where 'affected_release' or
+                        'package_state' don't have an item with 'cpe' (e.g.
+                        'cpe:/o:redhat:enterprise_linux:7') or 'product_name'
+                        (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT;
+                        this also hides all items in 'affected_release' &
+                        'package_state' that don't match PRODUCT
   -j, --json            Print full & raw JSON output
   -u, --urls            Print URLs for all relevant fields
 
@@ -636,7 +635,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.8.0 last mod 2016/11/04
+  rhsecapi v0.8.2 last mod 2016/11/06
   See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
 ```
 
