@@ -115,7 +115,7 @@ CVE-2014-3669
    Red Hat Enterprise Linux Extended Update Support 6.5 [php-5.3.3-27.el6_5.3]: RHSA-2015:0021
 ```
 
-A `--urls` or `-u` option adds URLS (and also note that status info is always printed to stderr and can thus be easily separated from normal output)
+A `--urls` or `-u` option adds URLS
 
 ```
 $ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --spotlight eus --urls 2>/dev/null
@@ -137,7 +137,7 @@ CVE-2014-3669 (https://access.redhat.com/security/cve/CVE-2014-3669)
    Red Hat Enterprise Linux Extended Update Support 6.5 [php-5.3.3-27.el6_5.3]: https://access.redhat.com/errata/RHSA-2015:0021
 ```
 
-CVEs can also be extracted from stdin with `--extract-stdin` (`-0`); note that the following examples use `--count` for the sake of brevity
+CVEs can also be extracted from stdin with `--extract-stdin` (`-0`) which uses case-insensitive regular expressions; note that the following examples use `--count` for the sake of brevity
 
 First example: pasting newline-separated CVEs with shell heredoc redirection
 
