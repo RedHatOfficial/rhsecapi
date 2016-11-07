@@ -277,6 +277,9 @@ def parse_args():
         add_help=False,
         epilog=epilog,
         formatter_class=fmt)
+    # Regex to match a CVE id string
+    cve_regex_str = 'CVE-[0-9]{4}-[0-9]{4,}'
+    re_cve = re.compile(cve_regex_str, re.IGNORECASE)
     # New group
     g_listByAttr = p.add_argument_group(
         'FIND CVES BY ATTRIBUTE')
@@ -336,7 +339,7 @@ def parse_args():
         help="Extract CVEs them from search query (as initiated by at least one of the --q-xxx options)")
     g_getCve.add_argument(
         '-0', '--extract-stdin', action='store_true',
-        help="Extract CVEs from stdin (CVEs will be matched by regex 'CVE-[0-9]{4}-[0-9]{4,}' and duplicates will be discarded); note that auto-detection of terminal width is not possible in this mode and defaults to a width of '70' (this can be overridden with '--width' option)")
+        help="Extract CVEs from stdin (CVEs will be matched by case-insensitive regex '{0}' and duplicates will be discarded); note that terminal width auto-detection is not possible in this mode and WIDTH defaults to '70' (but can be overridden with '--width')".format(cve_regex_str))
     # New group
     g_cveDisplay = p.add_argument_group(
         'CVE DISPLAY OPTIONS')
@@ -352,6 +355,9 @@ def parse_args():
         '-m', '--most-fields', dest='fields', action='store_const',
         const=','.join(mostFields),
         help="Print all fields mentioned above except the heavy-text ones -- (excluding: {0})".format(", ".join(notMostFields)))
+    g_cveDisplay.add_argument(
+        '--spotlight', dest='spotlightedProduct', metavar="PRODUCT",
+        help="Spotlight a particular PRODUCT via case-insensitive regex; this hides CVEs where 'affected_release' or 'package_state' don't have an item with 'cpe' (e.g. 'cpe:/o:redhat:enterprise_linux:7') or 'product_name' (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT; this also hides all items in 'affected_release' & 'package_state' that don't match PRODUCT")
     g_cveDisplay.add_argument(
         '-j', '--json', action='store_true',
         help="Print full & raw JSON output")
@@ -440,11 +446,10 @@ def parse_args():
         print("{0}: The --q-iava option is not compatible with other --q-xxx options; it can only be used alone".format(prog), file=stderr)
         exit(1)
     if o.extract_stdin and not stdin.isatty():
-        rx = re.compile('CVE-[0-9]{4}-[0-9]{4,}')
         found = []
         for line in stdin:
             # Iterate over each line of stdin adding the returned list to our found list
-            found.extend(rx.findall(line))
+            found.extend(re_cve.findall(line))
         if found:
             matchCount = len(found)
             # Converting to a set removes duplicates
@@ -453,12 +458,18 @@ def parse_args():
             print("{0}: Found {1} CVEs in stdin; {2} duplicates removed\n".format(prog, uniqueCount, matchCount-uniqueCount), file=stderr)
             o.cves.extend(found)
         else:
-            print("{0}: No CVEs (matching regex: 'CVE-[0-9]{{4}}-[0-9]{{4,}}') found in stdin\n".format(prog), file=stderr)
+            print("{0}: No CVEs (matching regex: '{1}') found in stdin\n".format(prog, cve_regex_str), file=stderr)
+    # Convert all CVE ids to uppercase
+    o.cves = [x.upper() for x in o.cves]
     # If only one CVE (common use-case), let's validate its format
-    if len(o.cves) == 1 and not o.cves[0].startswith('CVE-'):
+    if len(o.cves) == 1 and not re_cve.match(o.cves[0]):
+        print("{0}: Invalid CVE format; expected: 'CVE-YYYY-XXXX'\n".format(prog), file=stderr)
         o.showUsage = True
-    # Show usage if no search (--q-xxx) and no CVEs mentioned
-    if o.showUsage or not (o.doSearch or o.cves or o.q_iava):
+    # If no search (--q-xxx) and no CVEs mentioned
+    if not (o.doSearch or o.cves or o.q_iava):
+        print("{0}: Must specify CVEs to retrieve or search to perform (one of the --q-xxx opts)\n".format(prog), file=stderr)
+        o.showUsage = True
+    if o.showUsage:
         p.print_usage()
         print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
@@ -508,7 +519,8 @@ class RHSecApiParse:
 
     def __init__(self,
                  fields='threat_severity,public_date,bugzilla,affected_release,package_state',
-                 printUrls=False, rawOutput=False, onlyCount=False, verbose=False, wrapWidth=1):
+                 printUrls=False, rawOutput=False, onlyCount=False, verbose=False, wrapWidth=1,
+                 spotlightedProduct=None):
         """Initialize class settings."""
         self.rhsda = RedHatSecDataApiClient(verbose)
         if len(fields):
@@ -530,6 +542,7 @@ class RHSecApiParse:
             self.w = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ", replace_whitespace=False)
         else:
             self.w = 0
+        self.spotlightedProduct = spotlightedProduct
 
     def get_terminal_width(self):
         h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))
@@ -585,6 +598,9 @@ class RHSecApiParse:
 
     def print_cve(self, cve):
         """Print CVE data."""
+        # Convenience:
+        spotlightedProduct = self.spotlightedProduct
+        # Output array:
         out = []
         try:
             requrl, j = self.rhsda.get_cve(cve)
@@ -598,20 +614,14 @@ class RHSecApiParse:
                 out.append("{0}\n Not present in Red Hat CVE database\n".format(cve))
                 if cve.startswith("CVE-"):
                     out.append(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
-            return "".join(out), False
+            if spotlightedProduct:
+                return "", False
+            else:
+                return "".join(out), False
         except requests.exceptions.RequestException as e:
             print("{0}: {1}".format(prog, e), file=stderr)
             err_print_support_urls()
             exit(1)
-
-        # If --count was used, done
-        if self.onlyCount:
-            return "".join(out), True
-
-        # If --json was used, done
-        if self.rawOutput:
-            out.append(jprint(j, False) + "\n")
-            return "".join(out), True
 
         # CVE name always printed
         name = ""
@@ -701,13 +711,28 @@ class RHSecApiParse:
         if self._check_field('references', j):
             out.append("  REFERENCES:{0}\n".format(self._stripjoin(j['references'], oneLineEach=True)))
 
+        # Setup product-spotlighting
+        if spotlightedProduct:
+            re_prod = re.compile(spotlightedProduct, re.IGNORECASE)
+        affected_release_foundSpotlightedProduct = False
+        package_state_foundSpotlightedProduct = False
+        
         if self._check_field('affected_release', j):
-            out.append("  AFFECTED_RELEASE (ERRATA):\n")
+            if spotlightedProduct:
+                out.append("  AFFECTED_RELEASE (ERRATA) MATCHING '{0}':\n".format(spotlightedProduct))
+            else:
+                out.append("  AFFECTED_RELEASE (ERRATA):\n")
             affected_release = j['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
                 affected_release = [affected_release]
             for release in affected_release:
+                if spotlightedProduct:
+                    if re_prod.search(release['product_name']) or re_prod.search(release['cpe']):
+                        affected_release_foundSpotlightedProduct = True
+                    else:
+                        # If product doesn't match spotlight, go to next
+                        continue
                 package = ""
                 if release.has_key('package'):
                     package = " [{0}]".format(release['package'])
@@ -715,18 +740,44 @@ class RHSecApiParse:
                 if self.printUrls:
                     advisory = "https://access.redhat.com/errata/{0}".format(advisory)
                 out.append("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
+            if spotlightedProduct and not affected_release_foundSpotlightedProduct:
+                # If nothing found, remove the "AFFECTED_RELEASE" heading
+                out.pop()
 
         if self._check_field('package_state', j):
-            out.append("  PACKAGE_STATE:\n")
+            if spotlightedProduct:
+                out.append("  PACKAGE_STATE MATCHING '{0}':\n".format(spotlightedProduct))
+            else:
+                out.append("  PACKAGE_STATE:\n")
             package_state = j['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
                 package_state = [package_state]
             for state in package_state:
+                if spotlightedProduct:
+                    if re_prod.search(state['product_name']) or re_prod.search(state['cpe']):
+                        package_state_foundSpotlightedProduct = True
+                    else:
+                        # If product doesn't match spotlight, go to next
+                        continue
                 package_name = ""
                 if state.has_key('package_name'):
                     package_name = " [{0}]".format(state['package_name'])
                 out.append("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
+            if spotlightedProduct and not package_state_foundSpotlightedProduct:
+                # If nothing found, remove the "PACKAGE_STATE" heading
+                out.pop()
+
+        if spotlightedProduct and not (affected_release_foundSpotlightedProduct or package_state_foundSpotlightedProduct):
+            return "", None
+
+        # For the sake of efficiency, the following two checks should be at the beginning
+        # However, being down here allows --count & --json to respect --spotlight-product
+        if self.onlyCount:
+            return "", True
+        if self.rawOutput:
+            out = jprint(j, False) + "\n"
+            return out, True
 
         # Add one final newline to the end
         out.append("\n")
@@ -789,7 +840,7 @@ def get_iava(iavaId, progressToStderr=False, onlyCount=False):
 
 
 def main(opts):
-    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.count, opts.verbose, opts.wrapWidth)
+    a = RHSecApiParse(opts.fields, opts.printUrls, opts.json, opts.count, opts.verbose, opts.wrapWidth, opts.spotlightedProduct)
     searchOutput = []
     iavaOutput = []
     cveOutput = []
@@ -848,10 +899,15 @@ def main(opts):
         pool.join()
         cveOutput, successValues = zip(*results)
         total = len(opts.cves)
+        hidden = successValues.count(None)
         valid = successValues.count(True)
-        print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid, total), file=stderr)
-        if valid != total:
-            print("Invalid CVE queries: {0} of {1}".format(successValues.count(False), total), file=stderr)
+        invalid = successValues.count(False)
+        print("Valid Red Hat CVE results retrieved: {0} of {1}".format(valid + hidden, total), file=stderr)
+        if hidden:
+            print("Results matching spotlight-product option: {0} of {1}".format(valid, total), file=stderr)
+        if invalid:
+            print("Invalid CVE queries: {0} of {1}".format(invalid, total), file=stderr)
+
     if opts.count:
         return
     if opts.verbose and opts.cves:
