@@ -2,11 +2,12 @@
 
 `rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/rhsecapi/issues/29). 
 
-Feedback/issues and pull requests are welcome. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+It works on RHEL6+ and feedback/feature-requests are welcome! If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
 ## Jump to ...
-- [Abbreviated usage](#abbreviated-usage)
 - [Simple CVE retrieval](#simple-cve-retrieval)
+- [Installation](#installation)
+- [Abbreviated usage](#abbreviated-usage)
 - [BASH intelligent tab-completion](#bash-intelligent-tab-completion)
 - [Field display](#field-display)
 - [Find CVEs](#find-cves)
@@ -15,26 +16,6 @@ Feedback/issues and pull requests are welcome. Would particularly like feedback 
   - [Find CVEs by IAVA](#find-cves-by-iava)
 - [Full help page](#full-help-page)
 - [Testing from python shell](#testing-from-python-shell)
-
-## Abbreviated usage
-
-```
-$ rhsecapi -h
-usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
-                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
-                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
-                [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
-                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
-                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
-                [CVE [CVE ...]]
-
-Run rhsecapi --help for full help page
-
-VERSION:
-  rhsecapi v0.9.0 last mod 2016/11/07
-  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
-```
 
 ## Simple CVE retrieval
 
@@ -188,6 +169,38 @@ Valid Red Hat CVE results retrieved: 48 of 48
 real	0m3.197s
 user	0m0.613s
 sys	0m0.077s
+```
+
+## Installation
+
+- **Option 1: Download python script directly from github and run it**
+  1. Download very latest (potentially bleeding-edge & broken) version: `curl -LO https://raw.githubusercontent.com/ryran/rhsecapi/master/rhsecapi.py`
+  1. Add execute bit: `chmod +x rhsecapi.py`
+  1. Execute: `./rhsecapi.py`
+
+- **Option 2 for RHEL6, RHEL7, Fedora: Install rsaw's yum repo and then rhsecapi rpm**
+  1. If you don't already have rsaw's yum repo due to xsos or upvm or something else, set it up with the following command: `yum install http://people.redhat.com/rsawhill/rpms/latest-rsawaroha-release.rpm`
+  1. Install rhsecapi: `yum install rhsecapi`
+  1. Execute: `rhsecapi`
+  
+## Abbreviated usage
+
+```
+$ rhsecapi -h
+usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
+                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
+                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
+                [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
+                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
+                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
+                [CVE [CVE ...]]
+
+Run rhsecapi --help for full help page
+
+VERSION:
+  rhsecapi v0.9.0 last mod 2016/11/07
+  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
 ## BASH intelligent tab-completion
