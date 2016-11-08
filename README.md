@@ -1,4 +1,4 @@
-# redhat-security-data-api
+# rhsecapi
 
 `rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/redhat-security-data-api/issues/29). 
 
