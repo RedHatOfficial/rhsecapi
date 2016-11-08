@@ -39,47 +39,68 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.8.2'
-vers['date'] = '2016/11/06'
+vers['version'] = '0.9.0'
+vers['date'] = '2016/11/07'
 # Set default number of worker threads to use
 if multiprocessing.cpu_count() < 4:
     defaultThreads = 4
 else:
     defaultThreads = multiprocessing.cpu_count() * 2
-# Supported CVE fields
-allFields = ['threat_severity',
-             'public_date',
-             'iava',
-             'cwe',
-             'cvss',
-             'cvss3',
-             'bugzilla',
-             'acknowledgement',
-             'details',
-             'statement',
-             'mitigation',
-             'upstream_fix',
-             'references',
-             'affected_release',
-             'package_state',
-             ]
+# All supported API-provided CVE fields
+allFields = [
+    'threat_severity',
+    'public_date',
+    'iava',
+    'cwe',
+    'cvss',
+    'cvss3',
+    'bugzilla',
+    'acknowledgement',
+    'details',
+    'statement',
+    'mitigation',
+    'upstream_fix',
+    'references',
+    'affected_release',
+    'package_state',
+    ]
 # All supported fields minus the few text-heavy ones
 mostFields = list(allFields)
-notMostFields = ['acknowledgement',
-                 'details',
-                 'statement',
-                 'mitigation',
-                 'references',
-                 ]
+notMostFields = [
+    'acknowledgement',
+    'details',
+    'statement',
+    'mitigation',
+    'references',
+    ]
 for f in notMostFields:
     mostFields.remove(f)
 # Simple set of default fields
-defaultFields = ['threat_severity',
-                 'public_date',
-                 'bugzilla',
-                 'affected_release',
-                 'package_state',
-                 ]
+defaultFields = [
+    'threat_severity',
+    'public_date',
+    'bugzilla',
+    'affected_release',
+    'package_state',
+    ]
+# Aliases to make life easier
+friendlyFieldAliases = {
+    'severity': 'threat_severity',
+    'date': 'public_date',
+    'fixed_releases': 'affected_release',
+    'fixed': 'affected_release',
+    'releases': 'affected_release',
+    'fix_states': 'package_state',
+    'states': 'package_state',
+    }
+friendlyFieldAliases_printable = [
+    "threat_severity → severity",
+    "public_date → date",
+    "affected_release → fixed_releases or fixed or releases",
+    "package_state → fix_states or states",
+    ]
+allFieldsPlusAliases = list(allFields)
+allFieldsPlusAliases.extend([k for k in friendlyFieldAliases])
 
 
 def _reduce_method(m):
@@ -346,18 +367,18 @@ def parse_args():
     g_cveDisplay0 = g_cveDisplay.add_mutually_exclusive_group()
     g_cveDisplay0.add_argument(
         '-f', '--fields', metavar="FIELDS", default=','.join(defaultFields),
-        help="Comma-separated fields to be displayed (default: {0}); optionally prepend with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3') or a caret (^) to remove fields from the default (e.g., '-f ^bugzilla,threat_severity')".format(", ".join(defaultFields)))
+        help="Customize field display via comma-separated case-insensitive list (default: {0}); see --all-fields option for full list of official API-provided fields; shorter field aliases: {1}; optionally prepend FIELDS with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3') or a caret (^) to remove fields from the default (e.g., '-f ^bugzilla,severity')".format(", ".join(defaultFields), ", ".join(friendlyFieldAliases_printable)))
     g_cveDisplay0.add_argument(
         '-a', '--all-fields', dest='fields', action='store_const',
         const=','.join(allFields),
-        help="Print all supported fields (currently: {0})".format(", ".join(allFields)))
+        help="Display all supported fields (currently: {0})".format(", ".join(allFields)))
     g_cveDisplay0.add_argument(
         '-m', '--most-fields', dest='fields', action='store_const',
         const=','.join(mostFields),
-        help="Print all fields mentioned above except the heavy-text ones -- (excluding: {0})".format(", ".join(notMostFields)))
+        help="Display all fields mentioned above except the heavy-text ones -- (excludes: {0})".format(", ".join(notMostFields)))
     g_cveDisplay.add_argument(
         '--spotlight', dest='spotlightedProduct', metavar="PRODUCT",
-        help="Spotlight a particular PRODUCT via case-insensitive regex; this hides CVEs where 'affected_release' or 'package_state' don't have an item with 'cpe' (e.g. 'cpe:/o:redhat:enterprise_linux:7') or 'product_name' (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT; this also hides all items in 'affected_release' & 'package_state' that don't match PRODUCT")
+        help="Spotlight a particular PRODUCT via case-insensitive regex; this hides CVEs where 'FIXED_RELEASES' or 'FIX_STATES' don't have an item with 'cpe' (e.g. 'cpe:/o:redhat:enterprise_linux:7') or 'product_name' (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT; this also hides all items in 'FIXED_RELEASES' & 'FIX_STATES' that don't match PRODUCT")
     g_cveDisplay.add_argument(
         '-j', '--json', action='store_true',
         help="Print full & raw JSON output")
@@ -372,7 +393,7 @@ def parse_args():
         help="Change wrap-width of long fields (acknowledgement, details, statement, mitigation) in non-json output (default: wrapping WIDTH equivalent to TERMWIDTH-2 unless using '--pastebin' where default WIDTH is '168'; specify '0' to disable wrapping; WIDTH defaults to '70' if option is used but WIDTH is omitted)")
     g_general.add_argument(
         '-c', '--count', action='store_true',
-        help="Print a count of the number of entities found")
+        help="Exit after printing CVE counts")
     g_general.add_argument(
         '-v', '--verbose', action='store_true',
         help="Print API urls & other debugging info to stderr")
@@ -473,26 +494,36 @@ def parse_args():
         p.print_usage()
         print("\nRun {0} --help for full help page\n\n{1}".format(prog, epilog))
         exit()
-    # Let's validate our fields; start by saving to a list
-    if o.fields.startswith('+') or o.fields.startswith('^'):
-        fields = o.fields[1:].split(',')
-    else:
-        fields = o.fields.split(',')
-    for f in fields:
-        # If a field isn't known, exit
-        if f not in allFields:
-            print("{0}: Field '{1}' is not a supported field; valid fields:\n"
-                  "{2}".format(prog, f, ", ".join(allFields)), file=stderr)
-            exit(1)
-        # If using '--fields -xxx' format, remove
-        if o.fields.startswith('^') and f in defaultFields:
-            defaultFields.remove(f)
-        # If using '--fields +xxx' format, add
-        elif o.fields.startswith('+'):
-            defaultFields.append(f)
-    # If we added/removed, we need to reset o.fields to new value
-    if o.fields.startswith('+') or o.fields.startswith('^'):
-        o.fields = ','.join(defaultFields)
+    if o.fields:
+        o.fields = o.fields.lower()
+        # Let's validate our fields; start by saving to a list
+        if o.fields.startswith('+') or o.fields.startswith('^'):
+            fields = o.fields[1:].split(',')
+        else:
+            fields = o.fields.split(',')
+        postProcessedFields = []
+        for f in fields:
+            # If a field isn't known, exit
+            if f not in allFieldsPlusAliases:
+                print("{0}: Field '{1}' is not a supported field; valid fields:\n"
+                      "{2}".format(prog, f, ", ".join(allFieldsPlusAliases)), file=stderr)
+                exit(1)
+            if f not in allFields:
+                f = friendlyFieldAliases[f]
+            # If using '--fields -xxx' format, remove
+            if o.fields.startswith('^') and f in defaultFields:
+                defaultFields.remove(f)
+            # If using '--fields +xxx' format, add
+            elif o.fields.startswith('+'):
+                defaultFields.append(f)
+            # Otherwise
+            else:
+                postProcessedFields.append(f)
+        # If we added/removed, we need to reset o.fields to new value
+        if o.fields.startswith('+') or o.fields.startswith('^'):
+            o.fields = ','.join(defaultFields)
+        else:
+            o.fields = ','.join(postProcessedFields)
     # If autowrap and using pastebin, set good width
     if o.wrapWidth == 1 and o.pastebin:
         o.wrapWidth = 168
@@ -611,9 +642,9 @@ class RHSecApiParse:
         except requests.exceptions.HTTPError as e:
             print("{0}: {1}".format(prog, e), file=stderr)
             if not self.onlyCount:
-                out.append("{0}\n Not present in Red Hat CVE database\n".format(cve))
+                out.append("{0}\n  Not present in Red Hat CVE database\n".format(cve))
                 if cve.startswith("CVE-"):
-                    out.append(" Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
+                    out.append("  Try https://cve.mitre.org/cgi-bin/cvename.cgi?name={0}\n\n".format(cve))
             if spotlightedProduct:
                 return "", False
             else:
@@ -640,25 +671,16 @@ class RHSecApiParse:
             url = ""
             if self.printUrls:
                 url = " (https://access.redhat.com/security/updates/classification)"
-            out.append("  IMPACT:  {0}{1}\n".format(j['threat_severity'], url))
+            out.append("  SEVERITY: {0} Impact{1}\n".format(j['threat_severity'], url))
 
         if self._check_field('public_date', j):
-            out.append("  DATE:  {0}\n".format(j['public_date'].split("T")[0]))
+            out.append("  DATE:     {0}\n".format(j['public_date'].split("T")[0]))
 
         if self._check_field('iava', j):
-            out.append("  IAVA:")
-            if self.printUrls:
-                out.append("\n")
-                iavas = j['iava'].split(",")
-                for i in iavas:
-                    i = i.strip()
-                    url = " (https://access.redhat.com/labs/iavmmapper/api/iava/{0})".format(i)
-                    out.append("   {0}{1}\n".format(i, url))
-            else:
-                out.append("  {0}\n".format(j['iava']))
+            out.append("  IAVA:     {0}\n".format(j['iava']))
 
         if self._check_field('cwe', j):
-            out.append("  CWE:  {0}".format(j['cwe']))
+            out.append("  CWE:      {0}".format(j['cwe']))
             if self.printUrls:
                 cwes = re.findall("CWE-[0-9]+", j['cwe'])
                 if len(cwes) == 1:
@@ -674,13 +696,13 @@ class RHSecApiParse:
             cvss_scoring_vector = j['cvss']['cvss_scoring_vector']
             if self.printUrls:
                 cvss_scoring_vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector={0}".format(cvss_scoring_vector)
-            out.append("  CVSS:  {0} ({1})\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
+            out.append("  CVSS:     {0} ({1})\n".format(j['cvss']['cvss_base_score'], cvss_scoring_vector))
 
         if self._check_field('cvss3', j):
             cvss3_scoring_vector = j['cvss3']['cvss3_scoring_vector']
             if self.printUrls:
                 cvss3_scoring_vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(cvss3_scoring_vector)
-            out.append("  CVSS3:  {0} ({1})\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
+            out.append("  CVSS3:    {0} ({1})\n".format(j['cvss3']['cvss3_base_score'], cvss3_scoring_vector))
 
         if 'bugzilla' in self.desiredFields:
             if j.has_key('bugzilla'):
@@ -688,9 +710,9 @@ class RHSecApiParse:
                     bug = j['bugzilla']['url']
                 else:
                     bug = j['bugzilla']['id']
-                out.append("  BUGZILLA:  {0}\n".format(bug))
+                out.append("  BUGZILLA: {0}\n".format(bug))
             else:
-                out.append("  BUGZILLA:  No Bugzilla data\n")
+                out.append("  BUGZILLA: No Bugzilla data\n")
                 out.append("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy\n")
 
         if self._check_field('acknowledgement', j):
@@ -719,9 +741,9 @@ class RHSecApiParse:
         
         if self._check_field('affected_release', j):
             if spotlightedProduct:
-                out.append("  AFFECTED_RELEASE (ERRATA) MATCHING '{0}':\n".format(spotlightedProduct))
+                out.append("  FIXED_RELEASES matching '{0}':\n".format(spotlightedProduct))
             else:
-                out.append("  AFFECTED_RELEASE (ERRATA):\n")
+                out.append("  FIXED_RELEASES:\n")
             affected_release = j['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
@@ -741,14 +763,14 @@ class RHSecApiParse:
                     advisory = "https://access.redhat.com/errata/{0}".format(advisory)
                 out.append("   {0}{1}: {2}\n".format(release['product_name'], package, advisory))
             if spotlightedProduct and not affected_release_foundSpotlightedProduct:
-                # If nothing found, remove the "AFFECTED_RELEASE" heading
+                # If nothing found, remove the "FIXED_RELEASES" heading
                 out.pop()
 
         if self._check_field('package_state', j):
             if spotlightedProduct:
-                out.append("  PACKAGE_STATE MATCHING '{0}':\n".format(spotlightedProduct))
+                out.append("  FIX_STATES matching '{0}':\n".format(spotlightedProduct))
             else:
-                out.append("  PACKAGE_STATE:\n")
+                out.append("  FIX_STATES:\n")
             package_state = j['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
@@ -765,7 +787,7 @@ class RHSecApiParse:
                     package_name = " [{0}]".format(state['package_name'])
                 out.append("   {2}: {0}{1}\n".format(state['product_name'], package_name, state['fix_state']))
             if spotlightedProduct and not package_state_foundSpotlightedProduct:
-                # If nothing found, remove the "PACKAGE_STATE" heading
+                # If nothing found, remove the "FIX_STATES" heading
                 out.pop()
 
         if spotlightedProduct and not (affected_release_foundSpotlightedProduct or package_state_foundSpotlightedProduct):
