@@ -1,6 +1,6 @@
 # rhsecapi
 
-`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/redhat-security-data-api/issues/29). 
+`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/rhsecapi/issues/29). 
 
 Feedback/issues and pull requests are welcome. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
@@ -33,7 +33,7 @@ Run rhsecapi --help for full help page
 
 VERSION:
   rhsecapi v0.9.0 last mod 2016/11/07
-  See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
+  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
 ## Simple CVE retrieval
@@ -422,7 +422,7 @@ machine access.redhat.com
   login YOUR-CUSTOMER-PORTAL-LOGIN
   password YOUR_PASSWORD_HERE
 
-For help, open an issue at http://github.com/ryran/redhat-security-data-api
+For help, open an issue at http://github.com/ryran/rhsecapi
 Or post a comment at https://access.redhat.com/discussions/2713931
 
 $ vim ~/.netrc
@@ -431,7 +431,7 @@ $ rhsecapi --verbose --q-iava invalid
 Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
 rhsecapi: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'invalid'
 
-For help, open an issue at http://github.com/ryran/redhat-security-data-api
+For help, open an issue at http://github.com/ryran/rhsecapi
 Or post a comment at https://access.redhat.com/discussions/2713931
 ```
 
@@ -620,7 +620,7 @@ GENERAL OPTIONS:
 
 VERSION:
   rhsecapi v0.9.0 last mod 2016/11/07
-  See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs
+  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
 ## Testing from python shell

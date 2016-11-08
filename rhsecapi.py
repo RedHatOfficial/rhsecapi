@@ -118,7 +118,7 @@ def err_print_support_urls(msg=None):
     """Print error + support urls."""
     if msg:
         print(msg, file=stderr)
-    print("For help, open an issue at http://github.com/ryran/redhat-security-data-api\n"
+    print("For help, open an issue at http://github.com/ryran/rhsecapi\n"
           "Or post a comment at https://access.redhat.com/discussions/2713931\n", file=stderr)
 
 
@@ -290,7 +290,7 @@ def parse_args():
     epilog = (
         "VERSION:\n"
         "  {0}\n"
-        "  See <http://github.com/ryran/redhat-security-data-api> to report bugs or RFEs").format(version)
+        "  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs").format(version)
     fmt = lambda prog: CustomFormatter(prog)
     p = argparse.ArgumentParser(
         prog=prog,
