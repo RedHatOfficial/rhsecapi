@@ -1,6 +1,6 @@
 # redhat-security-data-api
 
-`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/).
+`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/redhat-security-data-api/issues/29). 
 
 Feedback/issues and pull requests are welcome. Would particularly like feedback on the name `rhsecapi` as well as the options (e.g., `--q-xxx`). If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
 
