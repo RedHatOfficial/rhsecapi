@@ -1,8 +1,10 @@
 # rhsecapi
 
-`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/rhsecapi/issues/29). 
+`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/rhsecapi/issues/29). From the rpm description:
 
-It works on RHEL6+ and feedback/feature-requests are welcome! If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool: redhat-security-data-api - rhsecapi](https://access.redhat.com/discussions/2713931).
+> **Leverage Red Hat's Security Data API to find CVEs by various attributes (date, severity, scores, package, IAVA, etc). Retrieve customizable details about found CVEs or about specific CVE ids input on cmdline. Parse arbitrary stdin for CVE ids and generate a customized report, optionally sending it straight to pastebin. Searches are done via a single instantaneous http request and CVE retrieval is parallelized, utilizing multiple threads at once. Python requests is used for all remote communication, so proxy support is baked right in. BASH intelligent tab-completion is supported via optional Python argcomplete module. Python2 tested on RHEL6, RHEL7, & Fedora but since it doesn't integrate with RHN/RHSM/yum/Satellite, it can be used on any internet-connected machine. Feedback, feature requests, and code contributions welcome.**
+
+If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool using Red Hat's new Security Data API: rhsecapi](https://access.redhat.com/discussions/2713931).
 
 ## Jump to ...
 - [Simple CVE retrieval](#simple-cve-retrieval)
