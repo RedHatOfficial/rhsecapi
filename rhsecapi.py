@@ -39,8 +39,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '0.9.0'
-vers['date'] = '2016/11/07'
+vers['version'] = '0.9.1'
+vers['date'] = '2016/11/10'
 # Set default number of worker threads to use
 if multiprocessing.cpu_count() < 4:
     defaultThreads = 4
@@ -403,6 +403,9 @@ def parse_args():
     g_general.add_argument(
         '-p', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
+    g_general.add_argument(
+        '--dryrun', action='store_true',
+        help="Skip CVE retrieval; this option only makes sense in concert with --extract-stdin, for the purpose of quickly getting a printable list of CVE ids from stdin")
     # g_general.add_argument(
     #     '--p-lang', metavar="LANG", default='text',
     #     choices=['ABAP', 'Actionscript', 'ADA', 'Apache Log', 'AppleScript', 'APT sources.list', 'ASM (m68k)', 'ASM (pic16)', 'ASM (x86)', 'ASM (z80)', 'ASP', 'AutoIT', 'Backus-Naur form', 'Bash', 'Basic4GL', 'BlitzBasic', 'Brainfuck', 'C', 'C for Macs', 'C#', 'C++', 'C++ (with QT)', 'CAD DCL', 'CadLisp', 'CFDG', 'CIL / MSIL', 'COBOL', 'ColdFusion', 'CSS', 'D', 'Delphi', 'Diff File Format', 'DIV', 'DOS', 'DOT language', 'Eiffel', 'Fortran', "FourJ's Genero", 'FreeBasic', 'GetText', 'glSlang', 'GML', 'gnuplot', 'Groovy', 'Haskell', 'HQ9+', 'HTML', 'INI (Config Files)', 'Inno', 'INTERCAL', 'IO', 'Java', 'Java 5', 'Javascript', 'KiXtart', 'KLone C & C++', 'LaTeX', 'Lisp', 'LOLcode', 'LotusScript', 'LScript', 'Lua', 'Make', 'mIRC', 'MXML', 'MySQL', 'NSIS', 'Objective C', 'OCaml', 'OpenOffice BASIC', 'Oracle 8 & 11 SQL', 'Pascal', 'Perl', 'PHP', 'Pixel Bender', 'PL/SQL', 'POV-Ray', 'PowerShell', 'Progress (OpenEdge ABL)', 'Prolog', 'ProvideX', 'Python', 'Q(uick)BASIC', 'robots.txt', 'Ruby', 'Ruby on Rails', 'SAS', 'Scala', 'Scheme', 'Scilab', 'SDLBasic', 'Smalltalk', 'Smarty', 'SQL', 'T-SQL', 'TCL', 'thinBasic', 'TypoScript', 'Uno IDL', 'VB.NET', 'Verilog', 'VHDL', 'VIM Script', 'Visual BASIC', 'Visual Fox Pro', 'Visual Prolog', 'Whitespace', 'Winbatch', 'Windows Registry Files', 'X++', 'XML', 'Xorg.conf'],
@@ -893,7 +896,11 @@ def main(opts):
                     iavaOutput.append(cve + "\n")
             if not opts.pastebin:
                 print("".join(iavaOutput))
-    if opts.cves:
+    if opts.dryrun and opts.cves:
+        print("Skipping CVE retrieval due to --dryrun\n"
+              "Number of CVEs that would have been retrieved: {0}".format(len(opts.cves)), file=stderr)
+        cveOutput = " ".join(opts.cves) + "\n"
+    elif opts.cves:
         if opts.threads > len(opts.cves):
             opts.threads = len(opts.cves)
         if opts.verbose:
@@ -929,7 +936,6 @@ def main(opts):
             print("Results matching spotlight-product option: {0} of {1}".format(valid, total), file=stderr)
         if invalid:
             print("Invalid CVE queries: {0} of {1}".format(invalid, total), file=stderr)
-
     if opts.count:
         return
     if opts.verbose and opts.cves:

@@ -195,13 +195,13 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
                 [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
-                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
+                [-t THREDS] [-p] [--dryrun] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
-
+                
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.9.0 last mod 2016/11/07
+  rhsecapi v0.9.1 last mod 2016/11/10
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
@@ -209,12 +209,12 @@ VERSION:
 
 ```
 $ rhsecapi --
---all-fields      --json            --q-before        --q-iava          --spotlight
---count           --most-fields     --q-bug           --q-package       --threads
+--all-fields      --help            --q-after         --q-empty         --q-severity
+--count           --json            --q-before        --q-iava          --spotlight
+--dryrun          --most-fields     --q-bug           --q-package       --threads
 --extract-search  --pastebin        --q-cvss          --q-pagenum       --urls
 --extract-stdin   --pexpire         --q-cvss3         --q-pagesize      --verbose
 --fields          --q-advisory      --q-cwe           --q-raw           --wrap
---help            --q-after         --q-empty         --q-severity      
 ```
 
 ## Field display
@@ -520,14 +520,13 @@ CVE-2016-4979
 ## Full help page
 
 ```
-$ rhsecapi --help
 usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
                 [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
-                [-t THREDS] [-p] [-E [DAYS]] [-h] [--help]
+                [-t THREDS] [-p] [--dryrun] [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -626,6 +625,9 @@ GENERAL OPTIONS:
                         making CVE queries (default on this system: 8)
   -p, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
+  --dryrun              Skip CVE retrieval; this option only makes sense in
+                        concert with --extract-stdin, for the purpose of
+                        quickly getting a printable list of CVE ids from stdin
   -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
                         (defaults to '28'; specify '0' to disable expiration;
                         DAYS defaults to '1' if option is used but DAYS is
@@ -634,7 +636,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.9.0 last mod 2016/11/07
+  rhsecapi v0.9.1 last mod 2016/11/10
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
