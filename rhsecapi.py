@@ -37,7 +37,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc2'
+vers['version'] = '1.0.0_rc3'
 vers['date'] = '2016/18/10'
 
 

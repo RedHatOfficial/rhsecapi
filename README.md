@@ -407,7 +407,7 @@ CVE-2015-0235
 ```
 $ rhsecapi --loglevel info --q-iava not-a-real-iava
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
-[ERROR  ] rhsda: Login error; unable to get IAVA info
+[ERROR  ] rhsda: Login error
 
 IAVA→CVE mapping data is not provided by the public RH Security Data API.
 Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).
@@ -426,16 +426,14 @@ $ vim ~/.netrc
 
 $ rhsecapi --loglevel info --q-iava not-a-real-iava
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
-[ERROR  ] rhsda: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'not-a-real-iava'
+[ERROR  ] rhsda: IAVM Mapper app main index doesn't contain 'not-a-real-iava'
 
 For help, open an issue at http://github.com/ryran/rhsecapi
 Or post a comment at https://access.redhat.com/discussions/2713931
 ```
 
 ```
-$ rhsecapi --loglevel info --q-iava 2016-A-0287
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/2016-A-0287' ...
+$ rhsecapi --q-iava 2016-A-0287
 [NOTICE ] rhsda: 4 CVEs found with search
 
 CVE-2015-7940
@@ -467,9 +465,28 @@ $ rhsecapi --q-iava 2016-A-0287 --json --loglevel warning
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 --extract-search --count
+$ rhsecapi --q-iava 2016-A-0287 --loglevel debug --extract-search --product linux.6 --count
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+[DEBUG  ] rhsda: Return status: '200'; Content-Type: 'application/json; charset=utf-8'
+[DEBUG  ] rhsda: IAVM Mapper app main index contains '2016-A-0287'
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/2016-A-0287' ...
+[DEBUG  ] rhsda: Return status: '200'; Content-Type: 'application/json; charset=utf-8'
 [NOTICE ] rhsda: 4 CVEs found with search
+[INFO   ] rhsda: Using 4 worker threads
+[DEBUG  ] rhsda: Requested fields string: 'BASE'
+[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, bugzilla, affected_release, package_state'
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-7940.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-2107.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-4979.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json' ...
+[DEBUG  ] rhsda: Return status: '200'; Content-Type: 'application/json; charset=utf-8'
+[DEBUG  ] rhsda: Return status: '200'; Content-Type: 'application/json; charset=utf-8'
+[INFO   ] rhsda: Hiding CVE-2015-7940 due to negative product match
+[DEBUG  ] rhsda: Return status: '200'; Content-Type: 'application/json; charset=utf-8'
+[DEBUG  ] rhsda: Return status: '404'; Content-Type: 'text/html;charset=UTF-8'
+[INFO   ] rhsda: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
 [NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 4
+[NOTICE ] rhsda: Results matching spotlight-product option: 2 of 4
 [NOTICE ] rhsda: Invalid CVE queries: 1 of 4
 ```
 

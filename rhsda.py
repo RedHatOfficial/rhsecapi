@@ -744,17 +744,19 @@ class ApiClient:
             r = requests.get(url, auth=())
         except requests.exceptions.ConnectionError as e:
             self._err_print_support_urls(e)
-            return []
+            raise
         except requests.exceptions.RequestException as e:
             self._err_print_support_urls(e)
-            return []
+            raise
         except requests.exceptions.HTTPError as e:
             self._err_print_support_urls(e)
-            return []
-        try:
+            raise
+        r.raise_for_status()
+        logger.debug("Return status: '{0}'; Content-Type: '{1}'".format(r.status_code, r.headers['Content-Type']))
+        if 'application/json' in r.headers['Content-Type']:
              result = r.json()
-        except:
-            logger.error("Login error; unable to get IAVA info")
+        elif '<title>Login - Red Hat Customer Portal</title>' in r.content:
+            logger.error("Login error")
             print("\nIAVA→CVE mapping data is not provided by the public RH Security Data API.\n"
                   "Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).\n\n"
                   "Access to this data requires RH Customer Portal credentials be provided.\n"
@@ -770,17 +772,27 @@ class ApiClient:
 
     def get_iava(self, iavaId):
         """Validate IAVA number and return json."""
+        # Get main IAVA master index
         url = 'https://access.redhat.com/labs/iavmmapper/api/iava/'
         result = self._iavm_query(url)
-        if result:
-            if iavaId not in result:
-                logger.error("IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of '{0}'".format(iavaId))
-                self._err_print_support_urls()
-                return []
-        else:
+        if not result:
+            # If no result, we're not logged in & error has already been logged
             return []
+        if iavaId in result:
+            logger.debug("IAVM Mapper app main index contains '{0}'".format(iavaId))
+        else:
+            logger.error("IAVM Mapper app main index doesn't contain '{0}'".format(iavaId))
+            self._err_print_support_urls()
+            return []
+        # Get specific IAVA now
         url += '{0}'.format(iavaId)
-        result = self._iavm_query(url)
+        try:
+            result = self._iavm_query(url)
+        except requests.exceptions.HTTPError as e:
+            logger.info(e)
+            logger.error("IAVM Mapper app doesn't have entry for '{0}'".format(iavaId))
+            self._err_print_support_urls()
+            return []
         logger.log(25, "{0} CVEs found with search".format(len(result['IAVM']['CVEs']['CVENumber'])))
         return result
 
