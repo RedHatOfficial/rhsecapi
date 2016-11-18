@@ -25,9 +25,8 @@ Specify as many CVEs on cmdline as needed; certain details are printed to stderr
 
 ```
 $ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
-Valid Red Hat CVE results retrieved: 3 of 4
-Invalid CVE queries: 1 of 4
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 4
+[NOTICE ] rhsda: Invalid CVE queries: 1 of 4
 
 CVE-2013-4113
   SEVERITY: Critical Impact
@@ -69,17 +68,15 @@ CVE-2004-0230
 CVE-2015-4642
   Not present in Red Hat CVE database
   Try https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-4642
-
 ```
 
-A `--spotlight` option allows spotlighting a particular product via a case-insenstive regex, e.g., here's the same exact command above spotlighting EUS products:
+A `--product` option allows spotlighting a particular product via a case-insenstive regex, e.g., here's the same exact command above spotlighting EUS products:
 
 ```
-$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --spotlight eus
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
-Valid Red Hat CVE results retrieved: 3 of 4
-Results matching spotlight-product option: 2 of 4
-Invalid CVE queries: 1 of 4
+$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --product eus
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 4
+[NOTICE ] rhsda: Results matching spotlight-product option: 2 of 4
+[NOTICE ] rhsda: Invalid CVE queries: 1 of 4
 
 CVE-2013-4113
   SEVERITY: Critical Impact
@@ -102,7 +99,7 @@ CVE-2014-3669
 A `--urls` or `-u` option adds URLS
 
 ```
-$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --spotlight eus --urls 2>/dev/null
+$ rhsecapi CVE-2013-4113 CVE-2014-3669 CVE-2004-0230 CVE-2015-4642 --product eus --urls 2>/dev/null
 CVE-2013-4113 (https://access.redhat.com/security/cve/CVE-2013-4113)
   SEVERITY: Critical Impact (https://access.redhat.com/security/updates/classification)
   DATE:     2013-07-11
@@ -127,30 +124,26 @@ First example: pasting newline-separated CVEs with shell heredoc redirection
 
 ```
 $ rhsecapi --extract-stdin --count <<EOF
-> CVE-2016-5630 
-> CVE-2016-5631 
-> CVE-2016-5632 
-> CVE-2016-5633 
-> CVE-2016-5634 
-> CVE-2016-5635 
-> EOF
-rhsecapi: Found 6 CVEs in stdin; 0 duplicates removed
-
-rhsecapi: Unable to auto-detect terminal width due to stdin redirection; setting WIDTH to 70
-Valid Red Hat CVE results retrieved: 6 of 6
+CVE-2016-5630 
+CVE-2016-5631 
+CVE-2016-5632 
+CVE-2016-5633 
+CVE-2016-5634 
+CVE-2016-5635 
+EOF
+[NOTICE ] rhsda: Found 6 CVEs in stdin; 0 duplicates removed
+[WARNING] rhsda: Stdin redirection suppresses term-width auto-detection; setting WIDTH to 70
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 6 of 6
 ```
 
 Second example: piping in file(s) with `cat|` or file redirection (`< somefile`)
 
 ```
 $ cat scan-results.csv | rhsecapi -0 -c
-rhsecapi: Found 150 CVEs in stdin; 698 duplicates removed
-
-rhsecapi: Unable to auto-detect terminal width due to stdin redirection; setting WIDTH to 70
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-3197.json
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-4642.json
-Valid Red Hat CVE results retrieved: 148 of 150
-Invalid CVE queries: 2 of 150
+[NOTICE ] rhsda: Found 150 CVEs in stdin; 698 duplicates removed
+[WARNING] rhsda: Stdin redirection suppresses term-width auto-detection; setting WIDTH to 70
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 148 of 150
+[NOTICE ] rhsda: Invalid CVE queries: 2 of 150
 ```
 
 The CVE retrieval process is multi-threaded; with CPUcount < 4, it defaults to 4 threads; with CPUcount > 4, it defaults to `CPUcount * 2` 
@@ -164,26 +157,27 @@ $ rhsecapi --help | grep -A1 threads
                         making CVE queries (default on this system: 8)
 
 $ time rhsecapi --q-empty --q-pagesize 48 --extract-search >/dev/null
-CVEs found: 48
+[NOTICE ] rhsda: 48 CVEs found with search query
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 48 of 48
 
-Valid Red Hat CVE results retrieved: 48 of 48
-
-real	0m3.197s
-user	0m0.613s
-sys	0m0.077s
+real	0m3.872s
+user	0m0.825s
+sys	0m0.055s
 ```
 
 ## Installation
 
-- **Option 1: Download python script directly from github and run it**
-  1. Download very latest (potentially bleeding-edge & broken) version: `curl -LO https://raw.githubusercontent.com/ryran/rhsecapi/master/rhsecapi.py`
-  1. Add execute bit: `chmod +x rhsecapi.py`
-  1. Execute: `./rhsecapi.py`
-
-- **Option 2 for RHEL6, RHEL7, Fedora: Install rsaw's yum repo and then rhsecapi rpm**
+- **Option 1 for RHEL6, RHEL7, Fedora: Install rsaw's yum repo and then rhsecapi rpm**
   1. If you don't already have rsaw's yum repo due to xsos or upvm or something else, set it up with the following command: `yum install http://people.redhat.com/rsawhill/rpms/latest-rsawaroha-release.rpm`
   1. Install rhsecapi: `yum install rhsecapi`
   1. Execute: `rhsecapi`
+
+- **Option 2: Download latest release from github and run it**
+  1. Go to [Releases](https://github.com/ryran/rhsecapi/releases)
+  1. Download an extract a release
+  1. Optional: `mkdir -p ~/bin; ln -sv /PATH/TO/rhsecapi.py ~/bin/rhsecapi`
+  1. Execute: `rhsecapi`
+
   
 ## Abbreviated usage
 
@@ -194,14 +188,15 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
-                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
-                [-t THREDS] [-p] [--dryrun] [-E [DAYS]] [-h] [--help]
+                [--product PRODUCT] [-j] [-u] [-w [WIDTH]] [-c]
+                [-l {debug,info,notice,warning}] [-t THREDS] [-p] [--dryrun]
+                [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
-                
+
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v0.9.1 last mod 2016/11/10
+  rhsecapi v1.0.0_rc2 last mod 2016/18/10
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
@@ -209,12 +204,12 @@ VERSION:
 
 ```
 $ rhsecapi --
---all-fields      --help            --q-after         --q-empty         --q-severity
---count           --json            --q-before        --q-iava          --spotlight
---dryrun          --most-fields     --q-bug           --q-package       --threads
---extract-search  --pastebin        --q-cvss          --q-pagenum       --urls
---extract-stdin   --pexpire         --q-cvss3         --q-pagesize      --verbose
---fields          --q-advisory      --q-cwe           --q-raw           --wrap
+--all-fields      --help            --product         --q-cvss3         --q-pagesize
+--count           --json            --q-advisory      --q-cwe           --q-raw
+--dryrun          --loglevel        --q-after         --q-empty         --q-severity
+--extract-search  --most-fields     --q-before        --q-iava          --threads
+--extract-stdin   --pastebin        --q-bug           --q-package       --urls
+--fields          --pexpire         --q-cvss          --q-pagenum       --wrap
 ```
 
 ## Field display
@@ -222,11 +217,10 @@ $ rhsecapi --
 Add some fields to the defaults with `--fields +field[,field]...` and note that arguments to `--fields` are handled in a case-insensitive way
 
 ```
-$ rhsecapi CVE-2016-6302 -v --fields +CWE,cvss3
-DEBUG THREADS: '1'
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
-Valid Red Hat CVE results retrieved: 1 of 1
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state,cwe,cvss3'
+$ rhsecapi CVE-2016-6302 --fields +CWE,cvss3 --loglevel info
+[INFO   ] rhsda: Using 1 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 1 of 1
 
 CVE-2016-6302
   SEVERITY: Moderate Impact
@@ -250,29 +244,37 @@ CVE-2016-6302
    Not affected: Red Hat Enterprise Linux 7 [openssl098e]
 ```
 
-Remove some fields from the defaults with `--fields ^field[,field]...`
+Remove some fields from the list of all fields with `--fields ^field[,field]...`
 
 ```
-$ rhsecapi CVE-2016-6302 -vf ^FIXED_reLEASES,fIx_sTaTes
-DEBUG THREADS: '1'
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
-Valid Red Hat CVE results retrieved: 1 of 1
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla'
+$ rhsecapi CVE-2016-6302 -f ^FIXED_reLEASES,fIx_sTaTes,DETAILS -l info
+[INFO   ] rhsda: Using 1 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-6302.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 1 of 1
 
 CVE-2016-6302
   SEVERITY: Moderate Impact
   DATE:     2016-08-23
+  IAVA:     2016-A-0262
+  CWE:      CWE-190->CWE-125
+  CVSS:     4.3 (AV:N/AC:M/Au:N/C:N/I:N/A:P)
+  CVSS3:    5.9 (CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H)
   BUGZILLA: 1369855
+  UPSTREAM_FIX:  openssl 1.0.1u, openssl 1.0.2i
+  REFERENCES:
+   https://www.openssl.org/news/secadv/20160922.txt
 ```
 
 Note that there are also two presets: `--all-fields` and `--most-fields`
 
 ```
-$ rhsecapi CVE-2016-6302 -v --most-fields 2>&1 | grep FIELDS
-DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,upstream_fix,affected_release,package_state'
+$ rhsecapi CVE-2016-6302 --loglevel debug --most-fields 2>&1 | grep fields
+[DEBUG  ] rhsda: Requested fields string: 'MOST'
+[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla, upstream_fix, affected_release, package_state'
 
-$ rhsecapi CVE-2016-6302 -v --all-fields 2>&1 | grep FIELDS
-DEBUG FIELDS: 'threat_severity,public_date,iava,cwe,cvss,cvss3,bugzilla,acknowledgement,details,statement,mitigation,upstream_fix,references,affected_release,package_state'
+$ rhsecapi CVE-2016-6302 --loglevel debug --all-fields 2>&1 | grep fields
+[DEBUG  ] rhsda: Requested fields string: 'ALL'
+[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, mitigation, upstream_fix, references, affected_release, package_state'
 ```
 
 ## Find CVEs
@@ -281,74 +283,55 @@ The `--q-xxx` options can be combined to craft a search, listing CVEs via a sing
 ### Empty search: list CVEs by public-date
 
 ```
-$ rhsecapi --verbose --q-empty
-Getting 'https://access.redhat.com/labs/securitydataapi/cve.json' ...
-CVEs found: 1000
+ $ rhsecapi --loglevel info --q-empty
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json' ...
+[NOTICE ] rhsda: 1000 CVEs found with search query
 
-CVE-2016-8634
-CVE-2016-7035
-CVE-2016-8615
-CVE-2016-8625
-CVE-2016-8619
-CVE-2016-8624
-CVE-2016-8623
+CVE-2016-9401
+CVE-2016-9372
+CVE-2016-9066
+CVE-2016-9064
+CVE-2016-8635
+CVE-2016-9374
 ... (output truncated for brevity of this README)
 ```
 
 ```
-$ rhsecapi --verbose --q-empty --q-pagesize 5 --q-pagenum 3
-Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?per_page=5&page=3' ...
-CVEs found: 5
+$ rhsecapi -l info --q-empty --q-pagesize 4 --q-pagenum 3
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?per_page=5&page=3' ...
+[NOTICE ] rhsda: 4 CVEs found with search query
 
-CVE-2016-8617
-CVE-2016-8618
-CVE-2016-8621
-CVE-2016-8864
-CVE-2016-9013
+CVE-2016-5297
+CVE-2016-9376
+CVE-2016-5290
+CVE-2016-5291
 ```
 
 ```
-$ rhsecapi --q-empty --q-pagesize 1 --extract-search --all-fields --wrap 
-CVEs found: 1
+$ rhsecapi --q-empty --q-pagesize 1 --extract-search --all-fields 
+[NOTICE ] rhsda: 1 CVEs found with search query
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 1 of 1
 
-Valid Red Hat CVE results retrieved: 1 of 1
-
-CVE-2016-8632
-  SEVERITY: Moderate Impact
-  DATE:     2016-11-07
-  CWE:      119
-  CVSS:     6.8 (AV:L/AC:L/Au:S/C:C/I:C/A:C)
-  BUGZILLA: 1390832
-  ACKNOWLEDGEMENT:  
-   Red Hat would like to thank Qian Zhang from MarvelTeam of Qihoo 360
-   for reporting this issue.
+CVE-2016-9401
+  SEVERITY: Low Impact
+  DATE:     2016-11-17
+  CWE:      CWE-416
+  CVSS:     3.3 (AV:L/AC:M/Au:N/C:P/I:P/A:N)
+  CVSS3:    4.4 (CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N)
+  BUGZILLA: 1396383
   DETAILS:  
-   ** RESERVED ** This candidate has been reserved by an organization
-   or individual that will use it when announcing a new security
-   problem.  When the candidate has been publicized, the details for
-   this candidate will be provided.  A flaw was found in the TIPC
-   networking subsystem which could allow for memory corruption and
-   possible privilege escalation.  The flaw involves a system with an
-   unusually low MTU (60) on networking devices configured as bearers
-   for the TIPC protocol. An attacker could create a packet which will
-   overwrite memory outside of allocated space and allow for privilege
-   escalation.
-  STATEMENT:  
-   This issue is rated as important.  The affected code is not enabled
-   on Red Hat Enterprise Linux 6 and 7 or MRG-2 kernels.  The commit
-   introducing the comment was not included in Red Hat Enterprise
-   Linux 5.
+   Details pending
   FIX_STATES:
-   Not affected: Red Hat Enterprise Linux 5 [kernel]
-   Not affected: Red Hat Enterprise Linux 6 [kernel]
-   Not affected: Red Hat Enterprise Linux 7 [kernel]
+   New: Red Hat Enterprise Linux 5 [bash]
+   New: Red Hat Enterprise Linux 6 [bash]
+   New: Red Hat Enterprise Linux 7 [bash]
 ```
 
 ### Find by attributes
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01
-CVEs found: 6
+[NOTICE ] rhsda: 6 CVEs found with search query
 
 CVE-2015-3456
 CVE-2015-0235
@@ -360,12 +343,12 @@ CVE-2014-3567
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-10-01 --count
-CVEs found: 6
+[NOTICE ] rhsda: 6 CVEs found with search query
 ```
 
 ```
 $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --json
-CVEs found: 1
+[NOTICE ] rhsda: 1 CVEs found with search query
 
 [
   {
@@ -401,14 +384,13 @@ CVEs found: 1
 ```
 
 ```
-$ rhsecapi -v --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --extract-search --spotlight hypervisor
-Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-01&severity=critical&package=rhev-hypervisor6' ...
-CVEs found: 1
-
-DEBUG THREADS: '1'
-Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json' ...
-Valid Red Hat CVE results retrieved: 1 of 1
-DEBUG FIELDS: 'threat_severity,public_date,bugzilla,affected_release,package_state'
+$ rhsecapi -v --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --extract-search --product hypervisor
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-01&severity=critical&package=rhev-hypervisor6' ...
+[NOTICE ] rhsda: 1 CVEs found with search query
+[INFO   ] rhsda: Using 1 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2015-0235.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 1 of 1
+[NOTICE ] rhsda: Results matching spotlight-product option: 1 of 1
 
 CVE-2015-0235
   SEVERITY: Critical Impact
@@ -423,11 +405,11 @@ CVE-2015-0235
 ### Find CVEs by IAVA
 
 ```
-$ rhsecapi --verbose --q-iava invalid
-Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
-rhsecapi: Login error; unable to get IAVA info
+$ rhsecapi --loglevel info --q-iava not-a-real-iava
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+[ERROR  ] rhsda: Login error; unable to get IAVA info
 
-IAVA->CVE mapping data is not provided by the public RH Security Data API.
+IAVA→CVE mapping data is not provided by the public RH Security Data API.
 Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).
 
 Access to this data requires RH Customer Portal credentials be provided.
@@ -442,17 +424,19 @@ Or post a comment at https://access.redhat.com/discussions/2713931
 
 $ vim ~/.netrc
 
-$ rhsecapi --verbose --q-iava invalid 
-Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
-rhsecapi: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'invalid'
+$ rhsecapi --loglevel info --q-iava not-a-real-iava
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+[ERROR  ] rhsda: IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of 'not-a-real-iava'
 
 For help, open an issue at http://github.com/ryran/rhsecapi
 Or post a comment at https://access.redhat.com/discussions/2713931
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 
-CVEs found: 4
+$ rhsecapi --loglevel info --q-iava 2016-A-0287
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/iavmmapper/api/iava/2016-A-0287' ...
+[NOTICE ] rhsda: 4 CVEs found with search
 
 CVE-2015-7940
 CVE-2016-2107
@@ -461,8 +445,7 @@ CVE-2016-5604
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 --json 
-CVEs found: 4
+$ rhsecapi --q-iava 2016-A-0287 --json --loglevel warning 
 
 {
   "IAVM": {
@@ -484,21 +467,18 @@ CVEs found: 4
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 --extract-search --count 
-CVEs found: 4
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
-Valid Red Hat CVE results retrieved: 3 of 4
-Invalid CVE queries: 1 of 4
+$ rhsecapi --q-iava 2016-A-0287 --extract-search --count
+[NOTICE ] rhsda: 4 CVEs found with search
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 4
+[NOTICE ] rhsda: Invalid CVE queries: 1 of 4
 ```
 
 ```
-$ rhsecapi --q-iava 2016-A-0287 --extract-search --spotlight linux.6
-CVEs found: 4
-
-rhsecapi: 404 Client Error: Not Found for url: https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5604.json
-Valid Red Hat CVE results retrieved: 3 of 4
-Results matching spotlight-product option: 2 of 4
-Invalid CVE queries: 1 of 4
+$ rhsecapi --q-iava 2016-A-0287 --extract-search --product linux.6
+[NOTICE ] rhsda: 4 CVEs found with search
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 4
+[NOTICE ] rhsda: Results matching spotlight-product option: 2 of 4
+[NOTICE ] rhsda: Invalid CVE queries: 1 of 4
 
 CVE-2016-2107
   SEVERITY: Moderate Impact
@@ -525,8 +505,9 @@ usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
-                [--spotlight PRODUCT] [-j] [-u] [-w [WIDTH]] [-c] [-v]
-                [-t THREDS] [-p] [--dryrun] [-E [DAYS]] [-h] [--help]
+                [--product PRODUCT] [-j] [-u] [-w [WIDTH]] [-c]
+                [-l {debug,info,notice,warning}] [-t THREDS] [-p] [--dryrun]
+                [-E [DAYS]] [-h] [--help]
                 [CVE [CVE ...]]
 
 Make queries against the Red Hat Security Data API
@@ -592,8 +573,8 @@ CVE DISPLAY OPTIONS:
                         releases, package_state → fix_states or states;
                         optionally prepend FIELDS with plus (+) sign to add
                         fields to the default (e.g., '-f +iava,cvss3') or a
-                        caret (^) to remove fields from the default (e.g., '-f
-                        ^bugzilla,severity')
+                        caret (^) to remove fields from all-fields (e.g., '-f
+                        ^mitigation,severity')
   -a, --all-fields      Display all supported fields (currently:
                         threat_severity, public_date, iava, cwe, cvss, cvss3,
                         bugzilla, acknowledgement, details, statement,
@@ -602,7 +583,7 @@ CVE DISPLAY OPTIONS:
   -m, --most-fields     Display all fields mentioned above except the heavy-
                         text ones -- (excludes: acknowledgement, details,
                         statement, mitigation, references)
-  --spotlight PRODUCT   Spotlight a particular PRODUCT via case-insensitive
+  --product PRODUCT     Spotlight a particular PRODUCT via case-insensitive
                         regex; this hides CVEs where 'FIXED_RELEASES' or
                         'FIX_STATES' don't have an item with 'cpe' (e.g.
                         'cpe:/o:redhat:enterprise_linux:7') or 'product_name'
@@ -614,13 +595,17 @@ CVE DISPLAY OPTIONS:
 
 GENERAL OPTIONS:
   -w, --wrap [WIDTH]    Change wrap-width of long fields (acknowledgement,
-                        details, statement, mitigation) in non-json output
-                        (default: wrapping WIDTH equivalent to TERMWIDTH-2
-                        unless using '--pastebin' where default WIDTH is
-                        '168'; specify '0' to disable wrapping; WIDTH defaults
-                        to '70' if option is used but WIDTH is omitted)
+                        details, statement, mitigation, references) in non-
+                        json output (default: wrapping WIDTH equivalent to
+                        TERMWIDTH-2 unless using '--pastebin' where default
+                        WIDTH is '168'; specify '0' to disable wrapping; WIDTH
+                        defaults to '70' if option is used but WIDTH is
+                        omitted)
   -c, --count           Exit after printing CVE counts
-  -v, --verbose         Print API urls & other debugging info to stderr
+  -l, --loglevel {debug,info,notice,warning}
+                        Configure logging level threshold; lower from the
+                        default of 'notice' to see extra details printed to
+                        stderr
   -t, --threads THREDS  Set number of concurrent worker threads to allow when
                         making CVE queries (default on this system: 8)
   -p, --pastebin        Send output to Fedora Project Pastebin
@@ -636,79 +621,479 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v0.9.1 last mod 2016/11/10
+  rhsecapi v1.0.0_rc2 last mod 2016/18/10
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
-## Testing from python shell
+## Working with backend rhsda library
+
+The `rhsda` library does all the work of interfacing with the API. If run directly, it tries to find CVEs on stdin.
+
+```
+$ echo CVE-2016-9401 CVE-2016-9372 CVE-2016-8635 | python rhsda.py
+[NOTICE ] rhsda: Found 3 CVEs in stdin; 0 duplicates removed
+[INFO   ] rhsda: Using 3 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-9401.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8635.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-9372.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 3
+CVE-2016-9401
+  SEVERITY: Low Impact
+  DATE:     2016-11-17
+  CWE:      CWE-416
+  CVSS:     3.3 (AV:L/AC:M/Au:N/C:P/I:P/A:N)
+  CVSS3:    4.4 (CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N)
+  BUGZILLA: 1396383
+  DETAILS:  
+   Details pending
+  FIX_STATES:
+   New: Red Hat Enterprise Linux 5 [bash]
+   New: Red Hat Enterprise Linux 6 [bash]
+   New: Red Hat Enterprise Linux 7 [bash]
+
+CVE-2016-8635
+  SEVERITY: Moderate Impact
+  DATE:     2016-11-16
+  CVSS:     4.3 (AV:N/AC:M/Au:N/C:P/I:N/A:N)
+  CVSS3:    5.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N)
+  BUGZILLA: 1391818
+  ACKNOWLEDGEMENT:  
+   This issue was discovered by Hubert Kario (Red Hat).
+  DETAILS:  
+   ** RESERVED ** This candidate has been reserved by an organization
+   or individual that will use it when announcing a new security
+   problem.  When the candidate has been publicized, the details for
+   this candidate will be provided.  It was found that Diffie Hellman
+   Client key exchange handling in NSS was vulnerable to small
+   subgroup confinement attack. An attacker could use this flaw to
+   recover private keys by confining the client DH key to small
+   subgroup of the desired group.
+  FIXED_RELEASES:
+   Red Hat Enterprise Linux 5 [nss-3.21.3-2.el5_11]: RHSA-2016:2779
+   Red Hat Enterprise Linux 6 [nss-3.21.3-2.el6_8]: RHSA-2016:2779
+   Red Hat Enterprise Linux 7 [nss-3.21.3-2.el7_3]: RHSA-2016:2779
+
+CVE-2016-9372
+  SEVERITY: Moderate Impact
+  DATE:     2016-11-16
+  CVSS:     4.3 (AV:N/AC:M/Au:N/C:N/I:N/A:P)
+  CVSS3:    5.9 (CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H)
+  BUGZILLA: 1396409
+  DETAILS:  
+   Details pending
+  UPSTREAM_FIX:  wireshark 2.2.2
+  REFERENCES:
+   https://www.wireshark.org/security/wnpa-sec-2016-58.html
+  FIX_STATES:
+   Will not fix: Red Hat Enterprise Linux 5 [wireshark]
+   Will not fix: Red Hat Enterprise Linux 6 [wireshark]
+   Will not fix: Red Hat Enterprise Linux 7 [wireshark]
+```
+
+To plug it into, e.g., a web-app, check the help
 
 ```
 $ python
->>> import rhsecapi as r
->>> help(r.a)
-Help on instance of RedHatSecDataApiClient in module rhsecapi:
+>>> import rhsda
+>>> help(rhsda)
+Help on module rhsda:
 
-class RedHatSecDataApiClient
- |  Portable object to interface with the Red Hat Security Data API.
- |  
- |  https://access.redhat.com/documentation/en/red-hat-security-data-api/
- |  
- |  Requires:
- |    requests
- |    sys
- |  
- |  Methods defined here:
- |  
- |  __init__(self, progressToStderr=False, apiurl='https://access.redhat.com/labs/securitydataapi')
- |  
- |  get_cve(self, cve)
- |  
- |  get_cvrf(self, rhsa)
- |  
- |  get_cvrf_oval(self, rhsa)
- |  
- |  get_oval(self, rhsa)
- |  
- |  search_cve(self, params=None)
- |  
- |  search_cvrf(self, params=None)
- |  
- |  search_oval(self, params=None)
+NAME
+    rhsda
+
+FILE
+    /usr/share/rhsecapi/rhsda.py
+
+DESCRIPTION
+    # -*- coding: utf-8 -*-
+    #-------------------------------------------------------------------------------
+    # Copyright 2016 Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
+    #
+    #    This program is free software: you can redistribute it and/or modify
+    #    it under the terms of the GNU General Public License as published by
+    #    the Free Software Foundation, either version 3 of the License, or
+    #    (at your option) any later version.
+    #
+    #    This program is distributed in the hope that it will be useful,
+    #    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    #    General Public License <gnu.org/licenses/gpl.html> for more details.
+    #-------------------------------------------------------------------------------
+
+CLASSES
+    ApiClient
+    
+    class ApiClient
+     |  Portable object to interface with the Red Hat Security Data API.
+     |  
+     |  https://access.redhat.com/documentation/en/red-hat-security-data-api/
+     |  
+     |  Methods defined here:
+     |  
+     |  __init__(self, logLevel='notice')
+     |  
+     |  cve_search_query(self, params, outFormat='list')
+     |      Perform a CVE search query.
+     |      
+     |      ON *OUTFORMAT*:
+     |      
+     |      Setting to "list" returns list of found CVE ids.
+     |      Setting to "plaintext" returns str object containing new-line separated CVE ids.
+     |      Setting to "json" returns list object containing original JSON.
+     |      Setting to "jsonpretty" returns str object containing prettified JSON.
+     |  
+     |  find_cves(self, params=None, outFormat='json', before=None, after=None, bug=None, advisory=None, severity=None, package=None, cwe=None, cvss_score=None, cvss3_score=None, page=None, per_page=None)
+     |      Find CVEs by recent or attributes.
+     |      
+     |      Provides an index to recent CVEs when no parameters are passed. Returns a
+     |      convenience object as response with minimal attributes. 
+     |      
+     |      With *outFormat* of "json", returns JSON object.
+     |      With *outFormat* of "xml", returns unformatted XML as string.
+     |      If *params* dict is passed, additional parameters are ignored.
+     |  
+     |  find_cvrfs(self, params=None, outFormat='json', before=None, after=None, bug=None, cve=None, severity=None, package=None, page=None, per_page=None)
+     |      Find CVRF documents by recent or attributes.
+     |      
+     |      Provides an index to recent CVRF documents with a summary of their contents,
+     |      when no parameters are passed. Returns a convenience object as the response with
+     |      minimal attributes. 
+     |      
+     |      With *outFormat* of "json", returns JSON object.
+     |      With *outFormat* of "xml", returns unformatted XML as string.
+     |      If *params* dict is passed, additional parameters are ignored.
+     |  
+     |  find_ovals(self, params=None, outFormat='json', before=None, after=None, bug=None, cve=None, severity=None, page=None, per_page=None)
+     |      Find OVAL definitions by recent or attributes.
+     |      
+     |      Provides an index to recent OVAL definitions with a summary of their contents,
+     |      when no parameters are passed. Returns a convenience object as the response with
+     |      minimal attributes.
+     |      
+     |      With *outFormat* of "json", returns JSON object.
+     |      With *outFormat* of "xml", returns unformatted XML as string.
+     |      If *params* dict is passed, additional parameters are ignored.
+     |  
+     |  get_cve(self, cve, outFormat='json')
+     |      Retrieve full details of a CVE.
+     |  
+     |  get_cvrf(self, rhsa, outFormat='json')
+     |      Retrieve CVRF details for an RHSA.
+     |  
+     |  get_cvrf_oval(self, rhsa, outFormat='json')
+     |      Retrieve CVRF-OVAL details for an RHSA.
+     |  
+     |  get_iava(self, iavaId)
+     |      Validate IAVA number and return json.
+     |  
+     |  get_oval(self, rhsa, outFormat='json')
+     |      Retrieve OVAL details for an RHSA.
+     |  
+     |  mget_cves(self, cves, numThreads=0, onlyCount=False, outFormat='plaintext', urls=False, fields='ALL', wrapWidth=70, product=None, timeout=300)
+     |      Use multi-threading to lookup a list of CVEs and return text output.
+     |      
+     |      *cves*:       A list of CVE ids or a str obj from which to regex CVE ids
+     |      *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
+     |      *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
+     |      *outFormat*:  Control output format ("plaintext", "json", or "jsonpretty")
+     |      *urls*:       Whether to add extra URLs to certain fields
+     |      *fields*:     Customize which fields are displayed by passing comma-sep string
+     |      *wrapWidth*:  Width for long fields; 1 auto-detects based on terminal size
+     |      *product*:    Restrict display of CVEs based on product-matching regex
+     |      *timeout*:    Total ammount of time to wait for all CVEs to be retrieved
+     |      
+     |      ON *CVES*:
+     |      
+     |      If *cves* is a list, each item in the list will be retrieved as a CVE.
+     |      If *cves* is a string or file object, it will be regex-parsed line by line and
+     |      all CVE ids will be extracted into a list.
+     |      In all cases, character-case is irrelevant.
+     |      
+     |      ON *OUTFORMAT*:
+     |      
+     |      Setting to "plaintext" returns str object containing formatted output.
+     |      Setting to "json" returns list object (i.e., original JSON)
+     |      Setting to "jsonpretty" returns str object containing prettified JSON
+     |      
+     |      ON *FIELDS*:
+     |      
+     |      librhsecapi.cveFields.all is a list obj of supported fields, i.e.:
+     |          threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla,
+     |          acknowledgement, details, statement, mitigation, upstream_fix, references,
+     |          affected_release, package_state
+     |      
+     |      librhsecapi.cveFields.most is a list obj that excludes text-heavy fields, like:
+     |          acknowledgement, details, statement, mitigation, references
+     |      
+     |      librhsecapi.cveFields.base is a list obj of the most important fields, i.e.:
+     |          threat_severity, public_date, bugzilla, affected_release, package_state
+     |      
+     |      There is a group-alias for each of these, so you can do:
+     |          fields="ALL"
+     |          fields="MOST"
+     |          fields="BASE"
+     |      
+     |      Also note that some friendly aliases are supported, e.g.:
+     |          threat_severity → severity
+     |          public_date → date
+     |          affected_release → fixed_releases or fixed or releases
+     |          package_state → fix_states or states
+     |      
+     |      Note that the *fields* string can be prepended with "+" or "^" to signify
+     |      adding to cveFields.base or removing from cveFields.all, e.g.:
+     |          fields="+cvss,cwe,statement"
+     |          fields="^releases,mitigation"
+     |      
+     |      Finally: *fields* is case-insensitive.
+
+FUNCTIONS
+    extract_cves_from_input(obj)
+        Use case-insensitive regex to extract CVE ids from input object.
+        
+        *obj* can be a list, a file, or a string.
+        
+        A list of CVEs is returned.
+    
+    jprint(jsoninput, printOutput=True)
+        Pretty-print jsoninput.
+
+DATA
+    consolehandler = <logging.StreamHandler object>
+    cveFields = Namespace(aliases={'severity': 'threat_severity'...tails',...
+    cve_regex = <_sre.SRE_Pattern object>
+    cve_regex_string = 'CVE-[0-9]{4}-[0-9]{4,}'
+    logger = <logging.Logger object>
+    numThreadsDefault = 8
+    print_function = _Feature((2, 6, 0, 'alpha', 2), (3, 0, 0, 'alpha', 0)...
+
 (END)
->>> r.a.search_oval("cve=CVE-2016-5387")
-Getting 'https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387' ...
-('https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387', [{u'severity': u'important', u'bugzillas': [u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1421', u'CVEs': [u'CVE-2016-5387']}, {u'severity': u'important', u'bugzillas': [u'1347648', u'1353269', u'1353755'], u'resource_url': u'https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json', u'released_on': u'2016-07-18T04:00:00+00:00', u'RHSA': u'RHSA-2016:1422', u'CVEs': [u'CVE-2016-5387']}])
->>> r.jprint(r.a.search_oval("cve=CVE-2016-5387"))
-Getting 'https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387' ...
-[
-  "https://access.redhat.com/labs/securitydataapi/oval.json?cve=CVE-2016-5387", 
-  [
-    {
-      "CVEs": [
-        "CVE-2016-5387"
-      ], 
-      "RHSA": "RHSA-2016:1421", 
-      "bugzillas": [
-        "1353755"
-      ], 
-      "released_on": "2016-07-18T04:00:00+00:00", 
-      "resource_url": "https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1421.json", 
-      "severity": "important"
-    }, 
-    {
-      "CVEs": [
-        "CVE-2016-5387"
-      ], 
-      "RHSA": "RHSA-2016:1422", 
-      "bugzillas": [
-        "1347648", 
-        "1353269", 
-        "1353755"
-      ], 
-      "released_on": "2016-07-18T04:00:00+00:00", 
-      "resource_url": "https://access.redhat.com/labs/securitydataapi/oval/RHSA-2016:1422.json", 
-      "severity": "important"
-    }
-  ]
-]
+```
+
+As can be seen above, an `rhsda.ApiClient` class does most of the work. Simple methods for all operations laid out in the upstream documentation are available, allowing receipt of plain json/xml.
+
+```
+>>> a = rhsda.ApiClient()
+
+>>> json = a.find_cves(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 232 CVEs found with search query
+
+>>> json = a.find_cves(params={'after':'2015-01-01', 'before':'2015-02-01'})
+[NOTICE ] rhsda: 232 CVEs found with search query
+
+>>> json = a.find_cvrfs(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 50 CVRFs found with search query
+
+>>> json = a.find_ovals(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 20 OVALs found with search query
+
+>>> print(a.get_cve("CVE-2016-5773", outFormat='xml'))
+<Vulnerability name="CVE-2016-5773">
+ <DocumentDistribution xml:lang='en'>
+Copyright © 2012 Red Hat, Inc. All rights reserved.
+</DocumentDistribution>
+  <ThreatSeverity>Moderate</ThreatSeverity>
+  <PublicDate>2016-06-23T00:00:00</PublicDate>
+  <Bugzilla id="1351179" url="https://bugzilla.redhat.com/show_bug.cgi?id=1351179" xml:lang="en:us">
+CVE-2016-5773 php: ZipArchive class Use After Free Vulnerability in PHP's GC algorithm and unserialize
+    </Bugzilla>
+  <CVSS status="verified">
+    <CVSSBaseScore>5.1</CVSSBaseScore>
+    <CVSSScoringVector>AV:N/AC:H/Au:N/C:P/I:P/A:P</CVSSScoringVector>
+  </CVSS>
+  <CVSS3 status="verified">
+    <CVSS3BaseScore>5.6</CVSS3BaseScore>
+    <CVSS3ScoringVector>CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L</CVSS3ScoringVector>
+  </CVSS3>
+  <CWE>CWE-416</CWE>
+  <Details xml:lang="en:us" source="Mitre">
+php_zip.c in the zip extension in PHP before 5.5.37, 5.6.x before 5.6.23, and 7.x before 7.0.8 improperly interacts with the unserialize implementation and garbage collection, which allows remote attackers to execute arbitrary code or cause a denial of service (use-after-free and application crash) via crafted serialized data containing a ZipArchive object.
+    </Details>
+  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el6">
+    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6)</ProductName>
+    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
+    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
+    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el6</Package>
+  </AffectedRelease>
+  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el7">
+    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7)</ProductName>
+    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
+    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
+    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el7</Package>
+  </AffectedRelease>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
+    <ProductName>Red Hat Enterprise Linux 5</ProductName>
+    <FixState>Not affected</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
+    <ProductName>Red Hat Enterprise Linux 5</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php53</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:6">
+    <ProductName>Red Hat Enterprise Linux 6</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:7">
+    <ProductName>Red Hat Enterprise Linux 7</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <UpstreamFix>php 5.5.37, php 5.6.23</UpstreamFix>
+</Vulnerability>
+```
+
+Also available: multi-threaded CVE retrieval (with default conversion to pretty-formatted plaintext) via `mget_cves()` method. Defaults to showing all fields.
+
+```
+>>> a = rhsda.ApiClient('info')    # (This increases the console loglevel [stderr])
+>>> txt = a.mget_cves("CVE-2016-5387 CVE-2016-5392")
+[NOTICE ] rhsda: Found 2 CVEs in input; 0 duplicates removed
+[INFO   ] rhsda: Using 2 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 2 of 2
+>>> print(txt)
+CVE-2016-5392
+  SEVERITY: Important Impact
+  DATE:     2016-07-14
+  CWE:      CWE-20
+  CVSS:     6.8 (AV:N/AC:L/Au:S/C:C/I:N/A:N)
+  CVSS3:    6.5 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N)
+  BUGZILLA: 1356195
+  ACKNOWLEDGEMENT:  
+   This issue was discovered by Yanping Zhang (Red Hat).
+  DETAILS:  
+   The API server in Kubernetes, as used in Red Hat OpenShift
+   Enterprise 3.2, in a multi tenant environment allows remote
+   authenticated users with knowledge of other project names to obtain
+   sensitive project and user information via vectors related to the
+   watch-cache list.  The Kubernetes API server contains a watch cache
+   that speeds up performance. Due to an input validation error
+   OpenShift Enterprise may return data for other users and projects
+   when queried by a user. An attacker with knowledge of other project
+   names could use this vulnerability to view their information.
+  FIXED_RELEASES:
+   Red Hat OpenShift Enterprise 3.2 [atomic-openshift-3.2.1.7-1.git.0.2702170.el7]: RHSA-2016:1427
+  FIX_STATES:
+   Affected: Red Hat OpenShift Enterprise 3 [Security]
+
+CVE-2016-5387
+  SEVERITY: Important Impact
+  DATE:     2016-07-18
+  IAVA:     2016-B-0160
+  CWE:      CWE-20
+  CVSS:     5.0 (AV:N/AC:L/Au:N/C:N/I:P/A:N)
+  CVSS3:    5.0 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:N/I:L/A:N)
+  BUGZILLA: 1353755
+  ACKNOWLEDGEMENT:  
+   Red Hat would like to thank Scott Geary (VendHQ) for reporting this
+   issue.
+  DETAILS:  
+   The Apache HTTP Server through 2.4.23 follows RFC 3875 section
+   4.1.18 and therefore does not protect applications from the
+   presence of untrusted client data in the HTTP_PROXY environment
+   variable, which might allow remote attackers to redirect an
+   application's outbound HTTP traffic to an arbitrary proxy server
+   via a crafted Proxy header in an HTTP request, aka an "httpoxy"
+   issue.  NOTE: the vendor states "This mitigation has been assigned
+   the identifier CVE-2016-5387"; in other words, this is not a CVE ID
+   for a vulnerability.  It was discovered that httpd used the value
+   of the Proxy header from HTTP requests to initialize the HTTP_PROXY
+   environment variable for CGI scripts, which in turn was incorrectly
+   used by certain HTTP client implementations to configure the proxy
+   for outgoing HTTP requests. A remote attacker could possibly use
+   this flaw to redirect HTTP requests performed by a CGI script to an
+   attacker-controlled proxy via a malicious HTTP request.
+  UPSTREAM_FIX:  httpd 2.4.24, httpd 2.2.32
+  REFERENCES:
+   https://access.redhat.com/security/vulnerabilities/httpoxy
+   https://httpoxy.org/
+   https://www.apache.org/security/asf-httpoxy-response.txt
+  FIXED_RELEASES:
+   Red Hat Enterprise Linux 5 [httpd-2.2.3-92.el5_11]: RHSA-2016:1421
+   Red Hat Enterprise Linux 6 [httpd-2.2.15-54.el6_8]: RHSA-2016:1421
+   Red Hat Enterprise Linux 7 [httpd-2.4.6-40.el7_2.4]: RHSA-2016:1422
+   Red Hat JBoss Core Services 1: RHSA-2016:1625
+   Red Hat JBoss Core Services on RHEL 6 Server [jbcs-httpd24-httpd-2.4.6-77.SP1.jbcs.el6]: RHSA-2016:1851
+   Red Hat JBoss Core Services on RHEL 7 Server [jbcs-httpd24-httpd-2.4.6-77.SP1.jbcs.el7]: RHSA-2016:1851
+   Red Hat JBoss Enterprise Web Server 2 for RHEL 6 Server [httpd-2.2.26-54.ep6.el6]: RHSA-2016:1649
+   Red Hat JBoss Enterprise Web Server 2 for RHEL 7 Server [httpd22-2.2.26-56.ep6.el7]: RHSA-2016:1648
+   Red Hat JBoss Web Server 2.1: RHSA-2016:1650
+   Red Hat JBoss Web Server 3.0: RHSA-2016:1624
+   Red Hat JBoss Web Server 3.0 for RHEL 6: RHSA-2016:1636
+   Red Hat JBoss Web Server 3.0 for RHEL 7: RHSA-2016:1635
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6) [httpd24-httpd-2.4.18-11.el6]: RHSA-2016:1420
+   Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7) [httpd24-httpd-2.4.18-11.el7]: RHSA-2016:1420
+  FIX_STATES:
+   Affected: Red Hat JBoss EAP 6 [httpd22]
+   Not affected: Red Hat JBoss EAP 7 [httpd22]
+   Will not fix: Red Hat JBoss EWS 1 [httpd]
+```
+
+The `mget_cves()` method's `cves=` argument (the 1st kwarg) regex-finds CVEs in an input string:
+
+```
+>>> s = "Hello thar we need CVE-2016-5387 fixed as well as CVE-2016-5392(worst).\nAnd not to mention CVE-2016-2379,CVE-2016-1000219please."
+>>> a = rhsda.ApiClient('info')
+>>> json = a.mget_cves(s, outFormat='json')
+[NOTICE ] rhsda: Found 4 CVEs in input; 0 duplicates removed
+[INFO   ] rhsda: Using 4 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-1000219.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-2379.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 4 of 4
+```
+
+... or a file:
+
+```
+>>> a = rhsda.ApiClient()
+>>> with open('scan-results.csv') as f:
+...     txt = a.mget_cves(f)
+... 
+[NOTICE ] rhsda: Found 150 CVEs in input; 698 duplicates removed
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 148 of 150
+[NOTICE ] rhsda: Invalid CVE queries: 2 of 150
+```
+
+Also of course a list is fine:
+
+```
+>>> L = ['CVE-2016-5387', 'CVE-2016-5392', 'CVE-2016-2379', 'CVE-2016-5773']
+>>> print(a.mget_cves(L, fields='BASE', product='web.server.3'))
+[INFO   ] rhsda: Using 4 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-2379.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5773.json' ...
+[INFO   ] rhsda: Hiding CVE-2016-5392 due to negative product match
+[INFO   ] rhsda: Hiding CVE-2016-2379 due to negative product match
+[INFO   ] rhsda: Hiding CVE-2016-5773 due to negative product match
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 4 of 4
+[NOTICE ] rhsda: Results matching spotlight-product option: 1 of 4
+CVE-2016-5387
+  SEVERITY: Important Impact
+  DATE:     2016-07-18
+  BUGZILLA: 1353755
+  FIXED_RELEASES matching 'web.server.3':
+   Red Hat JBoss Web Server 3.0: RHSA-2016:1624
+   Red Hat JBoss Web Server 3.0 for RHEL 6: RHSA-2016:1636
+   Red Hat JBoss Web Server 3.0 for RHEL 7: RHSA-2016:1635
+```
+
+There's also a convenience `cve_search_query()` method but that might go away.
+
+```
+>>> txt = a.cve_search_query({'after':'2015-01-01', 'before':'2015-02-01', 'per_page':5}, outFormat='plaintext')
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?per_page=5&after=2015-01-01&before=2015-02-01' ...
+[NOTICE ] rhsda: 5 CVEs found with search query
+>>> print(txt)
+CVE-2014-0141
+CVE-2015-1563
+CVE-2015-8779
+CVE-2014-9749
+CVE-2015-0210
 ```
