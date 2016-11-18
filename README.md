@@ -17,7 +17,7 @@ If you don't have a GitHub account but do have a Red Hat Portal login, go here: 
   - [Find CVEs by attributes](#find-cves-by-attributes)
   - [Find CVEs by IAVA](#find-cves-by-iava)
 - [Full help page](#full-help-page)
-- [Testing from python shell](#testing-from-python-shell)
+- [Working with backend rhsda library](#working-with-backend-rhsda-library)
 
 ## Simple CVE retrieval
 
