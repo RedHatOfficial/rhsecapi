@@ -37,7 +37,7 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc1'
+vers['version'] = '1.0.0_rc2'
 vers['date'] = '2016/18/10'
 
 
@@ -226,7 +226,7 @@ def parse_args():
         const='MOST',
         help="Display all fields mentioned above except the heavy-text ones -- (excludes: {0})".format(", ".join(rhsda.cveFields.not_most)))
     g_cveDisplay.add_argument(
-        '--spotlight', dest='spotlightedProduct', metavar="PRODUCT",
+        '--product',
         help="Spotlight a particular PRODUCT via case-insensitive regex; this hides CVEs where 'FIXED_RELEASES' or 'FIX_STATES' don't have an item with 'cpe' (e.g. 'cpe:/o:redhat:enterprise_linux:7') or 'product_name' (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT; this also hides all items in 'FIXED_RELEASES' & 'FIX_STATES' that don't match PRODUCT")
     g_cveDisplay.add_argument(
         '-j', '--json', action='store_true',
@@ -387,7 +387,7 @@ def main(opts):
                                         urls=opts.printUrls,
                                         fields=opts.fields,
                                         wrapWidth=opts.wrapWidth,
-                                        product=opts.spotlightedProduct)
+                                        product=opts.product)
         if not opts.count:
             print(file=sys.stderr)
     if opts.count:
@@ -401,7 +401,7 @@ def main(opts):
             response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.pexpire)
         except ValueError as e:
             print(e, file=sys.stderr)
-            print("{0}: Submitting to pastebin failed; print results to stdout instead? [y]".format(prog), file=sys.stderr)
+            logger.error("Submitting to pastebin failed; print results to stdout instead? [y]")
             answer = raw_input("> ")
             if "y" in answer or len(answer) == 0:
                 print(data, end="")

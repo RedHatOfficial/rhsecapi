@@ -71,6 +71,7 @@ cveFields.not_most = [
 cveFields.most = list(cveFields.all)
 for f in cveFields.not_most:
     cveFields.most.remove(f)
+del(f)
 # Simple set of most important fields
 cveFields.base = [
     'threat_severity',
@@ -99,6 +100,7 @@ cveFields.aliases_printable = [
 # A list of all fields + all aliases
 cveFields.all_plus_aliases = list(cveFields.all)
 cveFields.all_plus_aliases.extend([k for k in cveFields.aliases])
+del(k)
 
 
 # Regex to match a CVE id string
@@ -372,7 +374,7 @@ class ApiClient:
         except requests.exceptions.HTTPError as e:
             # CVE not in RH CVE DB
             logger.info(e)
-            if self.cfg.product or self.cfg.onlyCount or self.cfg.outFormat == 'json':
+            if self.cfg.product or self.cfg.onlyCount or self.cfg.outFormat.startswith('json'):
                 return False, ""
             else:
                 out.append("{0}\n  Not present in Red Hat CVE database".format(cve))
@@ -690,6 +692,13 @@ class ApiClient:
         if onlyCount:
             return
         if outFormat == 'plaintext':
+            # Remove all blank entries (created when spotlight-product hides a CVE)
+            cveOutput = list(cveOutput)
+            while 1:
+                try:
+                    cveOutput.remove("")
+                except ValueError:
+                    break
             return "\n".join(cveOutput)
         elif outFormat == 'json':
             return cveOutput
@@ -725,8 +734,8 @@ class ApiClient:
         """Print error + support urls."""
         if msg:
             logger.error(msg)
-        print("For help, open an issue at http://github.com/ryran/rhsecapi\n"
-              "Or post a comment at https://access.redhat.com/discussions/2713931\n", file=sys.stderr)
+        print("\nFor help, open an issue at http://github.com/ryran/rhsecapi\n"
+              "Or post a comment at https://access.redhat.com/discussions/2713931", file=sys.stderr)
 
     def _iavm_query(self, url):
         """Get IAVA json from IAVM Mapper App."""
@@ -746,13 +755,13 @@ class ApiClient:
              result = r.json()
         except:
             logger.error("Login error; unable to get IAVA info")
-            print("IAVA→CVE mapping data is not provided by the public RH Security Data API.\n"
+            print("\nIAVA→CVE mapping data is not provided by the public RH Security Data API.\n"
                   "Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).\n\n"
                   "Access to this data requires RH Customer Portal credentials be provided.\n"
                   "Create a ~/.netrc with the following contents:\n\n"
                   "machine access.redhat.com\n"
                   "  login YOUR-CUSTOMER-PORTAL-LOGIN\n"
-                  "  password YOUR_PASSWORD_HERE\n",
+                  "  password YOUR_PASSWORD_HERE",
                   file=sys.stderr)
             self._err_print_support_urls()
             return []
@@ -763,9 +772,12 @@ class ApiClient:
         """Validate IAVA number and return json."""
         url = 'https://access.redhat.com/labs/iavmmapper/api/iava/'
         result = self._iavm_query(url)
-        if iavaId not in result:
-            logger.error("IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of '{0}'".format(iavaId))
-            self._err_print_support_urls()
+        if result:
+            if iavaId not in result:
+                logger.error("IAVM Mapper (https://access.redhat.com/labs/iavmmapper) has no knowledge of '{0}'".format(iavaId))
+                self._err_print_support_urls()
+                return []
+        else:
             return []
         url += '{0}'.format(iavaId)
         result = self._iavm_query(url)
@@ -775,5 +787,4 @@ class ApiClient:
 
 if __name__ == "__main__":
     a = ApiClient('info')
-    # print(a.mget_cves(sys.stdin), end="")
-    print(a.cve_search_query('per_page=5', outFormat='json'))
+    print(a.mget_cves(sys.stdin), end="")
