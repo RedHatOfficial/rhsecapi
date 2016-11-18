@@ -625,13 +625,75 @@ VERSION:
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
-## Working with `rhsda` library, e.g., in a web app
+## Working with backend rhsda library
+
+The `rhsda` library does all the work of interfacing with the API. If run directly, it tries to find CVEs on stdin.
+
+```
+$ echo CVE-2016-9401 CVE-2016-9372 CVE-2016-8635 | python rhsda.py
+[NOTICE ] rhsda: Found 3 CVEs in stdin; 0 duplicates removed
+[INFO   ] rhsda: Using 3 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-9401.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-8635.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-9372.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 3 of 3
+CVE-2016-9401
+  SEVERITY: Low Impact
+  DATE:     2016-11-17
+  CWE:      CWE-416
+  CVSS:     3.3 (AV:L/AC:M/Au:N/C:P/I:P/A:N)
+  CVSS3:    4.4 (CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:N)
+  BUGZILLA: 1396383
+  DETAILS:  
+   Details pending
+  FIX_STATES:
+   New: Red Hat Enterprise Linux 5 [bash]
+   New: Red Hat Enterprise Linux 6 [bash]
+   New: Red Hat Enterprise Linux 7 [bash]
+
+CVE-2016-8635
+  SEVERITY: Moderate Impact
+  DATE:     2016-11-16
+  CVSS:     4.3 (AV:N/AC:M/Au:N/C:P/I:N/A:N)
+  CVSS3:    5.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N)
+  BUGZILLA: 1391818
+  ACKNOWLEDGEMENT:  
+   This issue was discovered by Hubert Kario (Red Hat).
+  DETAILS:  
+   ** RESERVED ** This candidate has been reserved by an organization
+   or individual that will use it when announcing a new security
+   problem.  When the candidate has been publicized, the details for
+   this candidate will be provided.  It was found that Diffie Hellman
+   Client key exchange handling in NSS was vulnerable to small
+   subgroup confinement attack. An attacker could use this flaw to
+   recover private keys by confining the client DH key to small
+   subgroup of the desired group.
+  FIXED_RELEASES:
+   Red Hat Enterprise Linux 5 [nss-3.21.3-2.el5_11]: RHSA-2016:2779
+   Red Hat Enterprise Linux 6 [nss-3.21.3-2.el6_8]: RHSA-2016:2779
+   Red Hat Enterprise Linux 7 [nss-3.21.3-2.el7_3]: RHSA-2016:2779
+
+CVE-2016-9372
+  SEVERITY: Moderate Impact
+  DATE:     2016-11-16
+  CVSS:     4.3 (AV:N/AC:M/Au:N/C:N/I:N/A:P)
+  CVSS3:    5.9 (CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H)
+  BUGZILLA: 1396409
+  DETAILS:  
+   Details pending
+  UPSTREAM_FIX:  wireshark 2.2.2
+  REFERENCES:
+   https://www.wireshark.org/security/wnpa-sec-2016-58.html
+  FIX_STATES:
+   Will not fix: Red Hat Enterprise Linux 5 [wireshark]
+   Will not fix: Red Hat Enterprise Linux 6 [wireshark]
+   Will not fix: Red Hat Enterprise Linux 7 [wireshark]
+```
+
+To plug it into, e.g., a web-app, check the help
 
 ```
 $ python
-Python 2.7.10 (default, Jun 20 2016, 14:45:40) 
-[GCC 5.3.1 20160406 (Red Hat 5.3.1-6)] on linux2
-Type "help", "copyright", "credits" or "license" for more information.
 >>> import rhsda
 >>> help(rhsda)
 Help on module rhsda:
@@ -805,10 +867,92 @@ DATA
     print_function = _Feature((2, 6, 0, 'alpha', 2), (3, 0, 0, 'alpha', 0)...
 
 (END)
+```
 
+As can be seen above, an `rhsda.ApiClient` class does most of the work. Simple methods for all operations laid out in the upstream documentation are available, allowing receipt of plain json/xml.
+
+```
 >>> a = rhsda.ApiClient()
+
+>>> json = a.find_cves(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 232 CVEs found with search query
+
+>>> json = a.find_cves(params={'after':'2015-01-01', 'before':'2015-02-01'})
+[NOTICE ] rhsda: 232 CVEs found with search query
+
+>>> json = a.find_cvrfs(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 50 CVRFs found with search query
+
+>>> json = a.find_ovals(after='2015-01-01', before='2015-02-01')
+[NOTICE ] rhsda: 20 OVALs found with search query
+
+>>> print(a.get_cve("CVE-2016-5773", outFormat='xml'))
+<Vulnerability name="CVE-2016-5773">
+ <DocumentDistribution xml:lang='en'>
+Copyright © 2012 Red Hat, Inc. All rights reserved.
+</DocumentDistribution>
+  <ThreatSeverity>Moderate</ThreatSeverity>
+  <PublicDate>2016-06-23T00:00:00</PublicDate>
+  <Bugzilla id="1351179" url="https://bugzilla.redhat.com/show_bug.cgi?id=1351179" xml:lang="en:us">
+CVE-2016-5773 php: ZipArchive class Use After Free Vulnerability in PHP's GC algorithm and unserialize
+    </Bugzilla>
+  <CVSS status="verified">
+    <CVSSBaseScore>5.1</CVSSBaseScore>
+    <CVSSScoringVector>AV:N/AC:H/Au:N/C:P/I:P/A:P</CVSSScoringVector>
+  </CVSS>
+  <CVSS3 status="verified">
+    <CVSS3BaseScore>5.6</CVSS3BaseScore>
+    <CVSS3ScoringVector>CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L</CVSS3ScoringVector>
+  </CVSS3>
+  <CWE>CWE-416</CWE>
+  <Details xml:lang="en:us" source="Mitre">
+php_zip.c in the zip extension in PHP before 5.5.37, 5.6.x before 5.6.23, and 7.x before 7.0.8 improperly interacts with the unserialize implementation and garbage collection, which allows remote attackers to execute arbitrary code or cause a denial of service (use-after-free and application crash) via crafted serialized data containing a ZipArchive object.
+    </Details>
+  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el6">
+    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6)</ProductName>
+    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
+    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
+    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el6</Package>
+  </AffectedRelease>
+  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el7">
+    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7)</ProductName>
+    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
+    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
+    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el7</Package>
+  </AffectedRelease>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
+    <ProductName>Red Hat Enterprise Linux 5</ProductName>
+    <FixState>Not affected</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
+    <ProductName>Red Hat Enterprise Linux 5</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php53</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:6">
+    <ProductName>Red Hat Enterprise Linux 6</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <PackageState cpe="cpe:/o:redhat:enterprise_linux:7">
+    <ProductName>Red Hat Enterprise Linux 7</ProductName>
+    <FixState>Will not fix</FixState>
+    <PackageName>php</PackageName>
+  </PackageState>
+  <UpstreamFix>php 5.5.37, php 5.6.23</UpstreamFix>
+</Vulnerability>
+```
+
+Also available: multi-threaded CVE retrieval (with default conversion to pretty-formatted plaintext) via `mget_cves()` method. Defaults to showing all fields.
+
+```
+>>> a = rhsda.ApiClient('info')    # (This increases the console loglevel [stderr])
 >>> txt = a.mget_cves("CVE-2016-5387 CVE-2016-5392")
 [NOTICE ] rhsda: Found 2 CVEs in input; 0 duplicates removed
+[INFO   ] rhsda: Using 2 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
 [NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 2 of 2
 >>> print(txt)
 CVE-2016-5392
@@ -886,15 +1030,45 @@ CVE-2016-5387
    Affected: Red Hat JBoss EAP 6 [httpd22]
    Not affected: Red Hat JBoss EAP 7 [httpd22]
    Will not fix: Red Hat JBoss EWS 1 [httpd]
+```
 
+The `mget_cves()` method's `cves=` argument (the 1st kwarg) regex-finds CVEs in an input string:
+
+```
+>>> s = "Hello thar we need CVE-2016-5387 fixed as well as CVE-2016-5392(worst).\nAnd not to mention CVE-2016-2379,CVE-2016-1000219please."
 >>> a = rhsda.ApiClient('info')
->>> print(a.mget_cves("CVE-2016-5387 CVE-2016-5392 CVE-2016-2379 CVE-2016-5773", fields='BASE', product='web.server.3'))
+>>> json = a.mget_cves(s, outFormat='json')
 [NOTICE ] rhsda: Found 4 CVEs in input; 0 duplicates removed
 [INFO   ] rhsda: Using 4 worker threads
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5773.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-1000219.json' ...
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-2379.json' ...
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 4 of 4
+```
+
+... or a file:
+
+```
+>>> a = rhsda.ApiClient()
+>>> with open('scan-results.csv') as f:
+...     txt = a.mget_cves(f)
+... 
+[NOTICE ] rhsda: Found 150 CVEs in input; 698 duplicates removed
+[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 148 of 150
+[NOTICE ] rhsda: Invalid CVE queries: 2 of 150
+```
+
+Also of course a list is fine:
+
+```
+>>> L = ['CVE-2016-5387', 'CVE-2016-5392', 'CVE-2016-2379', 'CVE-2016-5773']
+>>> print(a.mget_cves(L, fields='BASE', product='web.server.3'))
+[INFO   ] rhsda: Using 4 worker threads
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5387.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5392.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-2379.json' ...
+[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5773.json' ...
 [INFO   ] rhsda: Hiding CVE-2016-5392 due to negative product match
 [INFO   ] rhsda: Hiding CVE-2016-2379 due to negative product match
 [INFO   ] rhsda: Hiding CVE-2016-5773 due to negative product match
@@ -908,80 +1082,11 @@ CVE-2016-5387
    Red Hat JBoss Web Server 3.0: RHSA-2016:1624
    Red Hat JBoss Web Server 3.0 for RHEL 6: RHSA-2016:1636
    Red Hat JBoss Web Server 3.0 for RHEL 7: RHSA-2016:1635
+```
 
->>> print(a.get_cve("CVE-2016-5773", outFormat='xml'))
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve/CVE-2016-5773.xml' ...
-<Vulnerability name="CVE-2016-5773">
- <DocumentDistribution xml:lang='en'>
-Copyright © 2012 Red Hat, Inc. All rights reserved.
-</DocumentDistribution>
-  <ThreatSeverity>Moderate</ThreatSeverity>
-  <PublicDate>2016-06-23T00:00:00</PublicDate>
-  <Bugzilla id="1351179" url="https://bugzilla.redhat.com/show_bug.cgi?id=1351179" xml:lang="en:us">
-CVE-2016-5773 php: ZipArchive class Use After Free Vulnerability in PHP's GC algorithm and unserialize
-    </Bugzilla>
-  <CVSS status="verified">
-    <CVSSBaseScore>5.1</CVSSBaseScore>
-    <CVSSScoringVector>AV:N/AC:H/Au:N/C:P/I:P/A:P</CVSSScoringVector>
-  </CVSS>
-  <CVSS3 status="verified">
-    <CVSS3BaseScore>5.6</CVSS3BaseScore>
-    <CVSS3ScoringVector>CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:L</CVSS3ScoringVector>
-  </CVSS3>
-  <CWE>CWE-416</CWE>
-  <Details xml:lang="en:us" source="Mitre">
-php_zip.c in the zip extension in PHP before 5.5.37, 5.6.x before 5.6.23, and 7.x before 7.0.8 improperly interacts with the unserialize implementation and garbage collection, which allows remote attackers to execute arbitrary code or cause a denial of service (use-after-free and application crash) via crafted serialized data containing a ZipArchive object.
-    </Details>
-  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el6">
-    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 6)</ProductName>
-    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
-    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
-    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el6</Package>
-  </AffectedRelease>
-  <AffectedRelease cpe="cpe:/a:redhat:rhel_software_collections:2::el7">
-    <ProductName>Red Hat Software Collections for Red Hat Enterprise Linux Server (v. 7)</ProductName>
-    <ReleaseDate>2016-11-15T00:00:00</ReleaseDate>
-    <Advisory type="RHSA" url="https://rhn.redhat.com/errata/RHSA-2016-2750.html">RHSA-2016:2750</Advisory>
-    <Package name="rh-php56-php">rh-php56-php-5.6.25-1.el7</Package>
-  </AffectedRelease>
-  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
-    <ProductName>Red Hat Enterprise Linux 5</ProductName>
-    <FixState>Not affected</FixState>
-    <PackageName>php</PackageName>
-  </PackageState>
-  <PackageState cpe="cpe:/o:redhat:enterprise_linux:5">
-    <ProductName>Red Hat Enterprise Linux 5</ProductName>
-    <FixState>Will not fix</FixState>
-    <PackageName>php53</PackageName>
-  </PackageState>
-  <PackageState cpe="cpe:/o:redhat:enterprise_linux:6">
-    <ProductName>Red Hat Enterprise Linux 6</ProductName>
-    <FixState>Will not fix</FixState>
-    <PackageName>php</PackageName>
-  </PackageState>
-  <PackageState cpe="cpe:/o:redhat:enterprise_linux:7">
-    <ProductName>Red Hat Enterprise Linux 7</ProductName>
-    <FixState>Will not fix</FixState>
-    <PackageName>php</PackageName>
-  </PackageState>
-  <UpstreamFix>php 5.5.37, php 5.6.23</UpstreamFix>
-</Vulnerability>
+There's also a convenience `cve_search_query()` method but that might go away.
 
->>> json = a.find_cves(after='2015-01-01', before='2015-02-01')
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2015-01-01&before=2015-02-01' ...
-[NOTICE ] rhsda: 232 CVEs found with search query
->>> json = a.find_cves(params={'after':'2015-01-01', 'before':'2015-02-01'})
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2015-01-01&before=2015-02-01' ...
-[NOTICE ] rhsda: 232 CVEs found with search query
-
->>> json = a.find_cvrfs(after='2015-01-01', before='2015-02-01')
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cvrf.json?after=2015-01-01&before=2015-02-01' ...
-[NOTICE ] rhsda: 50 CVRFs found with search query
-
->>> json = a.find_ovals(after='2015-01-01', before='2015-02-01')
-[INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/oval.json?after=2015-01-01&before=2015-02-01' ...
-[NOTICE ] rhsda: 20 OVALs found with search query
-
+```
 >>> txt = a.cve_search_query({'after':'2015-01-01', 'before':'2015-02-01', 'per_page':5}, outFormat='plaintext')
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?per_page=5&after=2015-01-01&before=2015-02-01' ...
 [NOTICE ] rhsda: 5 CVEs found with search query
