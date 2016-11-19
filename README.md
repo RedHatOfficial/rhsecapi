@@ -16,6 +16,7 @@ If you don't have a GitHub account but do have a Red Hat Portal login, go here: 
   - [Empty search: list CVEs by public-date](#empty-search-list-cves-by-public-date)
   - [Find CVEs by attributes](#find-cves-by-attributes)
   - [Find CVEs by IAVA](#find-cves-by-iava)
+- [Advanced: find unresolved CVEs for a specific package in a specific product](#advanced-find-unresolved-cves-for-a-specific-package-in-a-specific-product)
 - [Full help page](#full-help-page)
 - [Working with backend rhsda library](#working-with-backend-rhsda-library)
 
@@ -124,13 +125,13 @@ First example: pasting newline-separated CVEs with shell heredoc redirection
 
 ```
 $ rhsecapi --extract-stdin --count <<EOF
-CVE-2016-5630 
-CVE-2016-5631 
-CVE-2016-5632 
-CVE-2016-5633 
-CVE-2016-5634 
-CVE-2016-5635 
-EOF
+> CVE-2016-5630 
+> CVE-2016-5631 
+> CVE-2016-5632 
+> CVE-2016-5633 
+> CVE-2016-5634 
+> CVE-2016-5635 
+> EOF
 [NOTICE ] rhsda: Found 6 CVEs in stdin; 0 duplicates removed
 [WARNING] rhsda: Stdin redirection suppresses term-width auto-detection; setting WIDTH to 70
 [NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 6 of 6
@@ -174,7 +175,7 @@ sys	0m0.055s
 
 - **Option 2: Download latest release from github and run it**
   1. Go to [Releases](https://github.com/ryran/rhsecapi/releases)
-  1. Download an extract a release
+  1. Download and extract the latest release
   1. Optional: `mkdir -p ~/bin; ln -sv /PATH/TO/rhsecapi.py ~/bin/rhsecapi`
   1. Execute: `rhsecapi`
 
@@ -203,7 +204,7 @@ VERSION:
 ## BASH intelligent tab-completion
 
 ```
-$ rhsecapi --
+$ rhsecapi --[TabTab]
 --all-fields      --help            --product         --q-cvss3         --q-pagesize
 --count           --json            --q-advisory      --q-cwe           --q-raw
 --dryrun          --loglevel        --q-after         --q-empty         --q-severity
@@ -384,7 +385,7 @@ $ rhsecapi --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critic
 ```
 
 ```
-$ rhsecapi -v --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --extract-search --product hypervisor
+$ rhsecapi --loglevel info --q-package rhev-hypervisor6 --q-after 2014-12-01 --q-severity critical --extract-search --product hypervisor
 [INFO   ] rhsda: Getting 'https://access.redhat.com/labs/securitydataapi/cve.json?after=2014-12-01&severity=critical&package=rhev-hypervisor6' ...
 [NOTICE ] rhsda: 1 CVEs found with search query
 [INFO   ] rhsda: Using 1 worker threads
@@ -399,7 +400,6 @@ CVE-2015-0235
   FIXED_RELEASES matching 'hypervisor':
    RHEV Hypervisor for RHEL-6 [rhev-hypervisor6-6.6-20150123.1.el6ev]: RHSA-2015:0126
 ```
-
 
 
 ### Find CVEs by IAVA
@@ -513,6 +513,89 @@ CVE-2016-4979
   FIX_STATES matching 'linux.6':
    Not affected: Red Hat Enterprise Linux 6 [httpd]
 ```
+
+
+## Advanced: find unresolved CVEs for a specific package in a specific product
+
+- **Question:**
+
+  > *Are there any unresolved CVEs for the glibc package in RHEL6?*
+
+- **Recipe:**
+
+  1. Start with a package search (`--q-package glibc`)
+  1. Extract the CVEs (`--extract-search` or `-s`)
+  1. Use spotlight-product option to narrow results (`--product 'linux 6'`)
+    - Note: this option treats input as a case-insensitive extended regex and matches it against two product fields in the json data; see `--help` entry for `--product`
+  1. Restrict field display to exclude the `FIXED_RELEASES` field, e.g., `-f ^releases` OR specify customized list that includes `FIX_STATES` and not `FIXED_RELEASES` (e.g., `-f severity,date,cvss,states`)
+    - Note: fields parsed by `--fields`/`-f` are case-insensitive and there are multiple synonymous aliases for the RELASES & STATES fields; see `--help` entry for `--fields`
+
+- **Example:**
+
+  ```
+  $ rhsecapi --q-package glibc --extract-search --product 'linux 6' -f bugzilla,fix_states,severity,cvss
+  [NOTICE ] rhsda: 41 CVEs found with search query
+  [NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 41 of 41
+  [NOTICE ] rhsda: Results matching spotlight-product option: 8 of 41
+
+  CVE-2016-3075
+    SEVERITY: Low Impact
+    CVSS:     3.7 (AV:L/AC:H/Au:N/C:P/I:P/A:P)
+    BUGZILLA: 1321866
+    FIX_STATES matching 'linux 6':
+     Will not fix: Red Hat Enterprise Linux 6 [compat-glibc]
+     Will not fix: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2015-5277
+    SEVERITY: Important Impact
+    CVSS:     3.7 (AV:L/AC:H/Au:N/C:P/I:P/A:P)
+    BUGZILLA: 1262914
+    FIX_STATES matching 'linux 6':
+     Not affected: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2014-8121
+    SEVERITY: Low Impact
+    CVSS:     3.3 (AV:A/AC:L/Au:N/C:N/I:N/A:P)
+    BUGZILLA: 1165192
+    FIX_STATES matching 'linux 6':
+     Fix deferred: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2015-1472
+    SEVERITY: Low Impact
+    CVSS:     2.6 (AV:L/AC:H/Au:N/C:P/I:N/A:P)
+    BUGZILLA: 1188235
+    FIX_STATES matching 'linux 6':
+     Not affected: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2015-1473
+    SEVERITY: Low Impact
+    CVSS:     2.6 (AV:L/AC:H/Au:N/C:P/I:N/A:P)
+    BUGZILLA: 1209105
+    FIX_STATES matching 'linux 6':
+     Not affected: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2010-0296
+    SEVERITY: Low Impact
+    CVSS:     4.3 (AV:L/AC:L/Au:S/C:P/I:P/A:P)
+    BUGZILLA: 559579
+    FIX_STATES matching 'linux 6':
+     Not affected: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2010-0830
+    SEVERITY: Low Impact
+    CVSS:     3.7 (AV:L/AC:H/Au:N/C:P/I:P/A:P)
+    BUGZILLA: 599056
+    FIX_STATES matching 'linux 6':
+     Not affected: Red Hat Enterprise Linux 6 [glibc]
+
+  CVE-2009-5029
+    SEVERITY: Moderate Impact
+    CVSS:     6.5 (AV:N/AC:L/Au:S/C:P/I:P/A:P)
+    BUGZILLA: 761245
+    FIX_STATES matching 'linux 6':
+     Affected: Red Hat Enterprise Linux 6 [compat-glibc]
+  ```
+
 
 ## Full help page
 
@@ -641,6 +724,7 @@ VERSION:
   rhsecapi v1.0.0_rc2 last mod 2016/18/10
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
+
 
 ## Working with backend rhsda library
 
