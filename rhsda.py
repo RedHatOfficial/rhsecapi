@@ -127,16 +127,12 @@ else:
     numThreadsDefault = multiprocessing.cpu_count() * 2
 
 
-def jprint(jsoninput, printOutput=True):
+def jprint(jsoninput):
     """Pretty-print jsoninput."""
-    j = json.dumps(jsoninput, sort_keys=True, indent=2) + "\n"
-    if printOutput:
-        print(j)
-    else:
-        return j
+    return json.dumps(jsoninput, sort_keys=True, indent=2) + "\n"
 
 
-def extract_cves_from_input(obj):
+def extract_cves_from_input(obj, descriptiveNoun=None):
     """Use case-insensitive regex to extract CVE ids from input object.
 
     *obj* can be a list, a file, or a string.
@@ -146,9 +142,9 @@ def extract_cves_from_input(obj):
     # Array to store found CVEs
     found = []
     if obj == sys.stdin:
-        noun = "stdin"
-    else:
-        noun = "input"
+        descriptiveNoun = "stdin"
+    elif not descriptiveNoun:
+        descriptiveNoun = "input"
         if isinstance(obj, str):
             obj = obj.splitlines()
     for line in obj:
@@ -159,10 +155,15 @@ def extract_cves_from_input(obj):
         # Converting to a set removes duplicates
         found = list(set(found))
         uniqueCount = len(found)
-        logger.log(25, "Found {0} CVEs in {1}; {2} duplicates removed".format(uniqueCount, noun, matchCount-uniqueCount))
+        if matchCount-uniqueCount:
+            dupes = "; {0} duplicates removed".format(matchCount-uniqueCount)
+        else:
+            dupes = ""
+        logger.log(25, "Found {0} CVEs on {1}{2}".format(uniqueCount, descriptiveNoun, dupes))
         return [x.upper() for x in found]
     else:
-        logger.log(25, "No CVEs (matching regex: '{0}') found in {1}".format(cve_regex_string, noun))
+        logger.warning("No CVEs (matching regex: '{0}') found on {1}".format(cve_regex_string, descriptiveNoun))
+        return []
 
 
 class ApiClient:
@@ -198,7 +199,7 @@ class ApiClient:
                 if params[k]:
                     u += "&{0}={1}".format(k, params[k])
             u = u.replace("&", "?", 1)
-        logger.info("Getting '{0}{1}' ...".format(url, u))
+        logger.info("Getting {0}{1}".format(url, u))
         try:
             r = requests.get(url, params=params)
         except requests.exceptions.ConnectionError as e:
@@ -207,7 +208,10 @@ class ApiClient:
         except requests.exceptions.RequestException as e:
             logger.error(e)
             raise
-        logger.debug("Return status: '{0}'; Content-Type: '{1}'".format(r.status_code, r.headers['Content-Type']))
+        baseurl = r.url.split("/")[-1]
+        if not baseurl:
+            baseurl = r.url.split("/")[-2]
+        logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
         r.raise_for_status()
         if 'application/xml' in r.headers['Content-Type']:
             return r.content
@@ -581,6 +585,7 @@ class ApiClient:
             self.wrapper = textwrap.TextWrapper(width=wrapWidth, initial_indent="   ", subsequent_indent="   ", replace_whitespace=False)
         else:
             self.wrapper = 0
+        logger.debug("Set wrapWidth to '{0}'".format(wrapWidth))
 
     def mget_cves(self, cves, numThreads=0, onlyCount=False, outFormat='plaintext',
                   urls=False, fields='ALL', wrapWidth=70, product=None, timeout=300):
@@ -644,9 +649,7 @@ class ApiClient:
             raise ValueError("Invalid outFormat ('{0}') requested; should be one of: 'plaintext', 'json', 'jsonpretty'".format(outFormat))
         if isinstance(cves, str) or isinstance(cves, file):
             cves = extract_cves_from_input(cves)
-        elif isinstance(cves, list):
-            cves = [x.upper() for x in cves]
-        else:
+        elif not isinstance(cves, list):
             raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
         # Configure threads
         if not numThreads:
@@ -673,9 +676,9 @@ class ApiClient:
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(timeout=timeout)
         except KeyboardInterrupt:
-            logger.error("\nReceived KeyboardInterrupt; terminating worker threads")
+            logger.error("Received KeyboardInterrupt; terminating worker threads")
             pool.terminate()
-            return
+            raise
         else:
             pool.close()
         pool.join()
@@ -703,7 +706,7 @@ class ApiClient:
         elif outFormat == 'json':
             return cveOutput
         elif outFormat == 'jsonpretty':
-            return jprint(cveOutput, False)
+            return jprint(cveOutput)
 
     def cve_search_query(self, params, outFormat='list'):
         """Perform a CVE search query.
@@ -721,7 +724,7 @@ class ApiClient:
         if outFormat == 'json':
             return result
         if outFormat == 'jsonpretty':
-            return jprint(result, False)
+            return jprint(result)
         cves = []
         for i in result:
             cves.append(i['CVE'])
@@ -739,7 +742,7 @@ class ApiClient:
 
     def _iavm_query(self, url):
         """Get IAVA json from IAVM Mapper App."""
-        logger.info("Getting '{0}' ...".format(url))
+        logger.info("Getting {0}".format(url))
         try:
             r = requests.get(url, auth=())
         except requests.exceptions.ConnectionError as e:
@@ -752,7 +755,10 @@ class ApiClient:
             self._err_print_support_urls(e)
             raise
         r.raise_for_status()
-        logger.debug("Return status: '{0}'; Content-Type: '{1}'".format(r.status_code, r.headers['Content-Type']))
+        baseurl = r.url.split("/")[-1]
+        if not baseurl:
+            baseurl = r.url.split("/")[-2]
+        logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
         if 'application/json' in r.headers['Content-Type']:
              result = r.json()
         elif '<title>Login - Red Hat Customer Portal</title>' in r.content:

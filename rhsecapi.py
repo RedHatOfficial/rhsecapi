@@ -37,8 +37,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc3'
-vers['date'] = '2016/18/10'
+vers['version'] = '1.0.0_rc4'
+vers['date'] = '2016/11/20'
 
 
 # Logging
@@ -154,10 +154,10 @@ def parse_args():
     g_listByAttr = p.add_argument_group(
         'FIND CVES BY ATTRIBUTE')
     g_listByAttr.add_argument(
-        '--q-before', metavar="YEAR-MM-DD",
+        '--q-before', metavar="YYYY-MM-DD",
         help="Narrow down results to before a certain time period")
     g_listByAttr.add_argument(
-        '--q-after', metavar="YEAR-MM-DD",
+        '--q-after', metavar="YYYY-MM-DD",
         help="Narrow down results to after a certain time period")
     g_listByAttr.add_argument(
         '--q-bug', metavar="BZID",
@@ -202,8 +202,8 @@ def parse_args():
     g_getCve = p.add_argument_group(
         'QUERY SPECIFIC CVES')
     g_getCve.add_argument(
-        'cves', metavar="CVE", nargs='*',
-        help="Retrieve a CVE or space-separated list of CVEs (e.g.: 'CVE-2016-5387')")
+        'cves', metavar="CVE-YYYY-NNNN", nargs='*',
+        help="Retrieve a CVE or list of CVEs (e.g.: 'CVE-2016-5387'); note that case-insensitive regex-matching is done -- extra characters & duplicate CVEs will be discarded")
     g_getCve.add_argument(
         '-s', '--extract-search', action='store_true',
         help="Extract CVEs them from search query (as initiated by at least one of the --q-xxx options)")
@@ -314,13 +314,13 @@ def parse_args():
     if o.q_iava and o.doSearch:
         logger.error("The --q-iava option is incompatible with other --q-xxx options; it can only be used alone")
         sys.exit(1)
+    if o.cves:
+        o.cves = rhsda.extract_cves_from_input(o.cves, "cmdline")
+        if not o.cves:
+            o.showUsage = True
     if o.extract_stdin and not sys.stdin.isatty():
         found = rhsda.extract_cves_from_input(sys.stdin)
         o.cves.extend(found)
-    # If only one CVE (common use-case), let's validate its format
-    if len(o.cves) == 1 and not rhsda.cve_regex.match(o.cves[0]):
-        logger.error("Invalid CVE format '{0}'; expected: 'CVE-YYYY-XXXX'".format(o.cves[0]))
-        o.showUsage = True
     # If no search (--q-xxx) and no CVEs mentioned
     if not o.showUsage and not (o.doSearch or o.cves or o.q_iava):
         logger.error("Must specify a search to perform (one of the --q-xxx opts) or CVEs to retrieve")
@@ -352,7 +352,7 @@ def main(opts):
                 opts.cves.append(cve['CVE'])
         elif not opts.count:
             if opts.json:
-                searchOutput.append(rhsda.jprint(result, False))
+                searchOutput.append(rhsda.jprint(result))
             else:
                 for cve in result:
                     searchOutput.append(cve['CVE'] + "\n")
@@ -367,7 +367,7 @@ def main(opts):
             opts.cves.extend(result['IAVM']['CVEs']['CVENumber'])
         elif not opts.count:
             if opts.json:
-                iavaOutput.append(rhsda.jprint(result, False))
+                iavaOutput.append(rhsda.jprint(result))
             else:
                 for cve in result['IAVM']['CVEs']['CVENumber']:
                     iavaOutput.append(cve + "\n")
@@ -375,7 +375,7 @@ def main(opts):
                 print(file=sys.stderr)
                 print("".join(iavaOutput), end="")
     if opts.dryrun and opts.cves:
-        logger.notice("Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
+        logger.log(25, "Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
         cveOutput = " ".join(opts.cves) + "\n"
     elif opts.cves:
         if searchOutput or iavaOutput:
@@ -388,8 +388,6 @@ def main(opts):
                                         fields=opts.fields,
                                         wrapWidth=opts.wrapWidth,
                                         product=opts.product)
-        if not opts.count:
-            print(file=sys.stderr)
     if opts.count:
         return
     if opts.pastebin:
@@ -408,6 +406,7 @@ def main(opts):
         else:
             print(response)
     elif opts.cves:
+        print(file=sys.stderr)
         print(cveOutput, end="")
 
 
@@ -416,5 +415,5 @@ if __name__ == "__main__":
         opts = parse_args()
         main(opts)
     except KeyboardInterrupt:
-        print("\n{0}: Received KeyboardInterrupt; exiting".format(prog))
+        logger.error("Received KeyboardInterrupt; exiting")
         sys.exit()
