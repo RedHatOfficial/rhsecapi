@@ -184,20 +184,19 @@ sys	0m0.055s
 
 ```
 $ rhsecapi -h
-usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
+usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
-                [--product PRODUCT] [-j] [-u] [-w [WIDTH]] [-c]
-                [-l {debug,info,notice,warning}] [-t THREDS] [-p] [--dryrun]
-                [-E [DAYS]] [-h] [--help]
-                [CVE [CVE ...]]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m] [-p PRODUCT]
+                [-j] [-u] [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}]
+                [-t THREDS] [-P] [-E [DAYS]] [--dryrun] [-h] [--help]
+                [CVE-YYYY-NNNN [CVE-YYYY-NNNN ...]]
 
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v1.0.0_rc2 last mod 2016/18/10
+  rhsecapi v1.0.0_rc5 last mod 2016/11/22
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
@@ -600,24 +599,23 @@ CVE-2016-4979
 ## Full help page
 
 ```
-usage: rhsecapi [--q-before YEAR-MM-DD] [--q-after YEAR-MM-DD] [--q-bug BZID]
+usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m]
-                [--product PRODUCT] [-j] [-u] [-w [WIDTH]] [-c]
-                [-l {debug,info,notice,warning}] [-t THREDS] [-p] [--dryrun]
-                [-E [DAYS]] [-h] [--help]
-                [CVE [CVE ...]]
+                [--q-iava IAVA] [-s] [-0] [-f FIELDS | -a | -m] [-p PRODUCT]
+                [-j] [-u] [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}]
+                [-t THREDS] [-P] [-E [DAYS]] [--dryrun] [-h] [--help]
+                [CVE-YYYY-NNNN [CVE-YYYY-NNNN ...]]
 
 Make queries against the Red Hat Security Data API
 Original announcement: https://access.redhat.com/blogs/766093/posts/2387601
 Docs: https://access.redhat.com/documentation/en/red-hat-security-data-api/
 
 FIND CVES BY ATTRIBUTE:
-  --q-before YEAR-MM-DD
+  --q-before YYYY-MM-DD
                         Narrow down results to before a certain time period
-  --q-after YEAR-MM-DD  Narrow down results to after a certain time period
+  --q-after YYYY-MM-DD  Narrow down results to after a certain time period
   --q-bug BZID          Narrow down results by Bugzilla ID (specify one or
                         more, e.g.: '1326598,1084875')
   --q-advisory RHSA     Narrow down results by errata advisory (specify one or
@@ -651,8 +649,10 @@ FIND CVES BY IAVA:
                         above search parameters
 
 QUERY SPECIFIC CVES:
-  CVE                   Retrieve a CVE or space-separated list of CVEs (e.g.:
-                        'CVE-2016-5387')
+  CVE-YYYY-NNNN         Retrieve a CVE or list of CVEs (e.g.:
+                        'CVE-2016-5387'); note that case-insensitive regex-
+                        matching is done -- extra characters & duplicate CVEs
+                        will be discarded
   -s, --extract-search  Extract CVEs them from search query (as initiated by
                         at least one of the --q-xxx options)
   -0, --extract-stdin   Extract CVEs from stdin (CVEs will be matched by case-
@@ -683,7 +683,8 @@ CVE DISPLAY OPTIONS:
   -m, --most-fields     Display all fields mentioned above except the heavy-
                         text ones -- (excludes: acknowledgement, details,
                         statement, mitigation, references)
-  --product PRODUCT     Spotlight a particular PRODUCT via case-insensitive
+  -p, --product PRODUCT
+                        Spotlight a particular PRODUCT via case-insensitive
                         regex; this hides CVEs where 'FIXED_RELEASES' or
                         'FIX_STATES' don't have an item with 'cpe' (e.g.
                         'cpe:/o:redhat:enterprise_linux:7') or 'product_name'
@@ -708,20 +709,20 @@ GENERAL OPTIONS:
                         stderr
   -t, --threads THREDS  Set number of concurrent worker threads to allow when
                         making CVE queries (default on this system: 8)
-  -p, --pastebin        Send output to Fedora Project Pastebin
+  -P, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
-  --dryrun              Skip CVE retrieval; this option only makes sense in
-                        concert with --extract-stdin, for the purpose of
-                        quickly getting a printable list of CVE ids from stdin
   -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
                         (defaults to '28'; specify '0' to disable expiration;
                         DAYS defaults to '1' if option is used but DAYS is
                         omitted)
+  --dryrun              Skip CVE retrieval; this option only makes sense in
+                        concert with --extract-stdin, for the purpose of
+                        quickly getting a printable list of CVE ids from stdin
   -h                    Show short usage summary and exit
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v1.0.0_rc2 last mod 2016/18/10
+  rhsecapi v1.0.0_rc5 last mod 2016/11/22
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 

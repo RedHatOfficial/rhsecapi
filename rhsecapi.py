@@ -37,8 +37,8 @@ except:
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc4'
-vers['date'] = '2016/11/20'
+vers['version'] = '1.0.0_rc5'
+vers['date'] = '2016/11/22'
 
 
 # Logging
@@ -226,7 +226,7 @@ def parse_args():
         const='MOST',
         help="Display all fields mentioned above except the heavy-text ones -- (excludes: {0})".format(", ".join(rhsda.cveFields.not_most)))
     g_cveDisplay.add_argument(
-        '--product',
+        '-p', '--product',
         help="Spotlight a particular PRODUCT via case-insensitive regex; this hides CVEs where 'FIXED_RELEASES' or 'FIX_STATES' don't have an item with 'cpe' (e.g. 'cpe:/o:redhat:enterprise_linux:7') or 'product_name' (e.g. 'Red Hat Enterprise Linux 7') matching PRODUCT; this also hides all items in 'FIXED_RELEASES' & 'FIX_STATES' that don't match PRODUCT")
     g_cveDisplay.add_argument(
         '-j', '--json', action='store_true',
@@ -250,26 +250,14 @@ def parse_args():
         '-t', '--threads', metavar="THREDS", type=int, default=rhsda.numThreadsDefault,
         help="Set number of concurrent worker threads to allow when making CVE queries (default on this system: {0})".format(rhsda.numThreadsDefault))
     g_general.add_argument(
-        '-p', '--pastebin', action='store_true',
+        '-P', '--pastebin', action='store_true',
         help="Send output to Fedora Project Pastebin (paste.fedoraproject.org) and print only URL to stdout")
-    g_general.add_argument(
-        '--dryrun', action='store_true',
-        help="Skip CVE retrieval; this option only makes sense in concert with --extract-stdin, for the purpose of quickly getting a printable list of CVE ids from stdin")
-    # g_general.add_argument(
-    #     '-A', '--p-author', metavar="NAME", default=prog,
-    #     help="Set alphanumeric paste author (default: '{0}')".format(prog))
-    # g_general.add_argument(
-    #     '--p-password', metavar="PASSWD",
-    #     help="Set password string to protect paste")
-    # g_general.add_argument(
-    #     '--p-public', dest='p_private', default='yes', action='store_const', const='no',
-    #     help="Set paste to be publicly-discoverable")
     g_general.add_argument(
         '-E', '--pexpire', metavar="DAYS", nargs='?', const=1, default=28, type=int,
         help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '1' if option is used but DAYS is omitted)")
-    # g_general.add_argument(
-    #     '--p-project', metavar="PROJECT",
-    #     help="Associate paste with a project")
+    g_general.add_argument(
+        '--dryrun', action='store_true',
+        help="Skip CVE retrieval; this option only makes sense in concert with --extract-stdin, for the purpose of quickly getting a printable list of CVE ids from stdin")
     g_general.add_argument(
         '-h', dest='showUsage', action='store_true',
         help="Show short usage summary and exit")
