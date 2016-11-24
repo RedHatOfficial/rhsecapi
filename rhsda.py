@@ -652,7 +652,10 @@ class ApiClient:
         elif not isinstance(cves, list):
             raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
         if not len(cves):
-            return []
+            if outFormat in ['plaintext', 'jsonpretty']:
+                return ""
+            else:
+                return []
         # Configure threads
         if not numThreads:
             numThreads = numThreadsDefault
