@@ -45,7 +45,7 @@ if not (path.isfile(path.expanduser('~/.rhsecapi-no-argcomplete')) or path.isfil
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc6'
+vers['version'] = '1.0.0_rc7'
 vers['date'] = '2016/11/24'
 
 
