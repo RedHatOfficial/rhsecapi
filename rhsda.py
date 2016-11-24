@@ -651,6 +651,8 @@ class ApiClient:
             cves = extract_cves_from_input(cves)
         elif not isinstance(cves, list):
             raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+        if not len(cves):
+            return []
         # Configure threads
         if not numThreads:
             numThreads = numThreadsDefault

@@ -22,23 +22,31 @@ import requests
 import sys
 import logging
 import rhsda
+from os import path
 
-# Optional module
-try:
-    import argcomplete
-    haveArgcomplete = True
-except:
-    print("Missing optional python module: argcomplete\n"
-          "Install it to enable bash auto-magic tab-completion:\n"
-          "  yum/dnf install python-pip; pip install argcomplete\n"
-          "  activate-global-python-argcomplete; (Then restart shell)\n", file=sys.stderr)
-    haveArgcomplete = False
+# Optional argcomplete module
+haveArgcomplete = False
+if not (path.isfile(path.expanduser('~/.rhsecapi-no-argcomplete')) or path.isfile('/etc/rhsecapi-no-argcomplete')):
+    try:
+        import argcomplete
+        haveArgcomplete = True
+    except:
+        print("Missing optional python module: argcomplete\n\n"
+              "  To enable bash auto-magic tab-completion, install it:\n"
+              "    yum/dnf install python-pip\n"
+              "    pip install argcomplete\n"
+              "    activate-global-python-argcomplete\n"
+              "    (Open new shell)\n\n"
+              "  To skip using argcomplete AND disable future printing of this message:\n"
+              "    touch ~/.rhsecapi-no-argcomplete\n"
+              "      OR\n"
+              "    touch /etc/rhsecapi-no-argcomplete\n", file=sys.stderr)
 
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc5'
-vers['date'] = '2016/11/22'
+vers['version'] = '1.0.0_rc6'
+vers['date'] = '2016/11/24'
 
 
 # Logging
