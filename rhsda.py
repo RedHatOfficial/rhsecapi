@@ -429,16 +429,16 @@ class ApiClient:
             u = ""
             if self.cfg.urls:
                 u = " (https://access.redhat.com/security/updates/classification)"
-            out.append("  SEVERITY: {0} Impact{1}".format(J['threat_severity'], u))
+            out.append("  SEVERITY : {0} Impact{1}".format(J['threat_severity'], u))
         # PUBLIC_DATE
         if self.__check_field('public_date', J):
-            out.append("  DATE:     {0}".format(J['public_date'].split("T")[0]))
+            out.append("  DATE     : {0}".format(J['public_date'].split("T")[0]))
         # IAVA
         if self.__check_field('iava', J):
-            out.append("  IAVA:     {0}".format(J['iava']))
+            out.append("  IAVA     : {0}".format(J['iava']))
         # CWE ID
         if self.__check_field('cwe', J):
-            out.append("  CWE:      {0}".format(J['cwe']))
+            out.append("  CWE      : {0}".format(J['cwe']))
             if self.cfg.urls:
                 cwes = re.findall("CWE-[0-9]+", J['cwe'])
                 if len(cwes) == 1:
@@ -451,13 +451,13 @@ class ApiClient:
             vector = J['cvss']['cvss_scoring_vector']
             if self.cfg.urls:
                 vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector={0}".format(vector)
-            out.append("  CVSS:     {0} ({1})".format(J['cvss']['cvss_base_score'], vector))
+            out.append("  CVSS     : {0} ({1})".format(J['cvss']['cvss_base_score'], vector))
         # CVSS3
         if self.__check_field('cvss3', J):
             vector = J['cvss3']['cvss3_scoring_vector']
             if self.cfg.urls:
                 vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(vector)
-            out.append("  CVSS3:    {0} ({1})".format(J['cvss3']['cvss3_base_score'], vector))
+            out.append("  CVSS3    : {0} ({1})".format(J['cvss3']['cvss3_base_score'], vector))
         # BUGZILLA
         if 'bugzilla' in self.cfg.desiredFields:
             if J.has_key('bugzilla'):
@@ -465,35 +465,35 @@ class ApiClient:
                     bug = J['bugzilla']['url']
                 else:
                     bug = J['bugzilla']['id']
-                out.append("  BUGZILLA: {0}".format(bug))
+                out.append("  BUGZILLA : {0}".format(bug))
             else:
-                out.append("  BUGZILLA: No Bugzilla data")
+                out.append("  BUGZILLA : No Bugzilla data")
                 out.append("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy")
         # ACKNOWLEDGEMENT
         if self.__check_field('acknowledgement', J):
-            out.append("  ACKNOWLEDGEMENT:  {0}".format(self.__stripjoin(J['acknowledgement'])))
+            out.append("  ACKNOWLEDGEMENT :  {0}".format(self.__stripjoin(J['acknowledgement'])))
         # DETAILS
         if self.__check_field('details', J):
-            out.append("  DETAILS:  {0}".format(self.__stripjoin(J['details'])))
+            out.append("  DETAILS : {0}".format(self.__stripjoin(J['details'])))
         # STATEMENT
         if self.__check_field('statement', J):
-            out.append("  STATEMENT:  {0}".format(self.__stripjoin(J['statement'])))
+            out.append("  STATEMENT : {0}".format(self.__stripjoin(J['statement'])))
         # MITIGATION
         if self.__check_field('mitigation', J):
-            out.append("  MITIGATION:  {0}".format(self.__stripjoin(J['mitigation'])))
+            out.append("  MITIGATION : {0}".format(self.__stripjoin(J['mitigation'])))
         # UPSTREAM FIX
         if self.__check_field('upstream_fix', J):
-            out.append("  UPSTREAM_FIX:  {0}".format(J['upstream_fix']))
+            out.append("  UPSTREAM_FIX : {0}".format(J['upstream_fix']))
         # REFERENCES
         if self.__check_field('references', J):
-            out.append("  REFERENCES:{0}".format(self.__stripjoin(J['references'], oneLineEach=True)))
+            out.append("  REFERENCES :{0}".format(self.__stripjoin(J['references'], oneLineEach=True)))
         # AFFECTED RELEASE
         foundProduct_affected_release = False
         if self.__check_field('affected_release', J):
             if self.cfg.product:
-                out.append("  FIXED_RELEASES matching '{0}':".format(self.cfg.product))
+                out.append("  FIXED_RELEASES matching '{0}' :".format(self.cfg.product))
             else:
-                out.append("  FIXED_RELEASES:")
+                out.append("  FIXED_RELEASES :")
             affected_release = J['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
@@ -511,7 +511,7 @@ class ApiClient:
                 advisory = release['advisory']
                 if self.cfg.urls:
                     advisory = "https://access.redhat.com/errata/{0}".format(advisory)
-                out.append("   {0}{1}: {2}".format(release['product_name'], pkg, advisory))
+                out.append("   {0}:{1} via {2} ({3})".format(release['product_name'], pkg, advisory, release['release_date'].split("T")[0]))
             if self.cfg.product and not foundProduct_affected_release:
                 # If nothing found, remove the "FIXED_RELEASES" heading
                 out.pop()
@@ -519,9 +519,9 @@ class ApiClient:
         foundProduct_package_state = False
         if self.__check_field('package_state', J):
             if self.cfg.product:
-                out.append("  FIX_STATES matching '{0}':".format(self.cfg.product))
+                out.append("  FIX_STATES matching '{0}' :".format(self.cfg.product))
             else:
-                out.append("  FIX_STATES:")
+                out.append("  FIX_STATES :")
             package_state = J['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
@@ -578,26 +578,34 @@ class ApiClient:
         if self.cfg.outFormat.startswith('json'):
             return True, J
         # If CVE list output requested
-        if self.cfg.outFormat == 'list':
+        elif self.cfg.outFormat == 'list':
             cves = J['cvelist']
             if cves:
                 return True, cves
             else:
                 return None, []
-        # IAVA ID
-        out.append(iava)
-        # SEVERITY
-        out.append("  SEVERITY: {0}".format(J['severity']))
+        # Return no output if only counting
+        elif self.cfg.onlyCount:
+            return True, ""
+        # IAVA NUMBER
+        u = ""
+        if self.cfg.urls:
+            u = " ({0}/iava?number={1})".format(self.cfg.apiUrl, iava)
+        out.append("{0}{1}".format(iava, u))
         # TITLE
-        out.append("  TITLE: {0}".format(self.__stripjoin(J['title'])))
+        out.append("  TITLE    : {0}".format(J['title']))
+        # SEVERITY
+        out.append("  SEVERITY : {0}".format(J['severity']))
+        # ID
+        out.append("  ID       : {0}".format(J['id']))
         # CVELIST
         if J['cvelist']:
-            out.append("  CVES:")
+            out.append("  CVES     :")
             for cve in J['cvelist']:
-                out.append("   {0}".format(cve))
-        # Return no output if only counting
-        if self.cfg.onlyCount:
-            return True, ""
+                u = ""
+                if self.cfg.urls:
+                    u = " (https://access.redhat.com/security/cve/{0})".format(cve)
+                out.append("   {0}{1}".format(cve, u))
         # Add one final newline to the end
         out.append("")
         return True, "\n".join(out)
@@ -792,14 +800,14 @@ class ApiClient:
             return jprint(cveOutput)
 
     def mget_iavas(self, iavas, numThreads=0, onlyCount=False, outFormat='plaintext',
-                   wrapWidth=70, timeout=300):
+                   urls=False, timeout=300):
         """Use multi-threading to lookup a list of IAVAs and return text output.
 
         *iavas*:      A list of IAVA ids
         *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
         *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
         *outFormat*:  Control output format ("list", "plaintext", "json", or "jsonpretty")
-        *wrapWidth*:  Width for long fields; 1 auto-detects based on terminal size
+        *urls*:       Whether to add extra URLs to certain fields
         *timeout*:    Total ammount of time to wait for all CVEs to be retrieved
 
         ON *OUTFORMAT*:
@@ -823,7 +831,7 @@ class ApiClient:
         # Set cfg directives for our worker
         self.cfg.onlyCount = onlyCount
         self.cfg.outFormat = outFormat
-        self._set_cve_plaintext_width(wrapWidth)
+        self.cfg.urls = urls
         # Disable sigint before starting process pool
         original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
         pool = multiprocessing.Pool(processes=numThreads)

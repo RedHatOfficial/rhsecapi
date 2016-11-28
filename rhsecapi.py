@@ -366,7 +366,7 @@ def main(opts):
                                           numThreads=opts.threads,
                                           onlyCount=opts.count,
                                           outFormat=oF,
-                                          wrapWidth=opts.wrapWidth)
+                                          urls=opts.printUrls)
         if iavaOutput:
             if opts.extract_search:
                 opts.cves.extend(iavaOutput)
