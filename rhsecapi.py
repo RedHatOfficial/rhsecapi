@@ -338,7 +338,9 @@ def parse_args():
 
 def main(opts):
     apiclient = rhsda.ApiClient(opts.loglevel)
-    # apiclient.cfg.apiUrl = 'https://accessci.usersys.redhat.com/labs/securitydataapi'
+    from os import environ
+    if environ.has_key('RHSDA_URL') and environ['RHSDA_URL'].startswith('http'):
+        apiclient.cfg.apiUrl = environ['RHSDA_URL']
     searchOutput = ""
     iavaOutput = ""
     cveOutput = ""
