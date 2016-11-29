@@ -474,7 +474,7 @@ class ApiClient:
             out.append("  ACKNOWLEDGEMENT :  {0}".format(self.__stripjoin(J['acknowledgement'])))
         # DETAILS
         if self.__check_field('details', J):
-            out.append("  DETAILS : {0}".format(self.__stripjoin(J['details'])))
+            out.append("  DETAILS  : {0}".format(self.__stripjoin(J['details'])))
         # STATEMENT
         if self.__check_field('statement', J):
             out.append("  STATEMENT : {0}".format(self.__stripjoin(J['statement'])))
@@ -880,7 +880,7 @@ class ApiClient:
         elif outFormat == 'jsonpretty':
             return jprint(iavaOutput)
 
-    def cve_search_query(self, params, outFormat='list'):
+    def cve_search_query(self, params, outFormat='list', urls=False):
         """Perform a CVE search query.
 
         ON *OUTFORMAT*:
@@ -897,13 +897,53 @@ class ApiClient:
             return result
         if outFormat == 'jsonpretty':
             return jprint(result)
-        cves = []
-        for i in result:
-            cves.append(i['CVE'])
         if outFormat == 'list':
+            cves = []
+            for i in result:
+                cves.append(i['CVE'])
             return cves
         if outFormat == 'plaintext':
-            return "\n".join(cves)
+            rows = []
+            rows.append(["CVE ID", "PUB DATE", "BUGZILLA", "SEVERITY", "CVSS2", "CVSS3",  "RHSAS", "PKGS"])
+            for i in result:
+                date = ""
+                if i.has_key('public_date'):
+                    date = i['public_date'].split("T")[0]
+                bz = ""
+                if urls:
+                    cve = "https://access.redhat.com/security/cve/{0}".format(i['CVE'])
+                    if i.has_key('bugzilla'):
+                        bz = "https://bugzilla.redhat.com/show_bug.cgi?id={0}".format(i['bugzilla'])
+                else:
+                    cve = i['CVE']
+                    if i.has_key('bugzilla'):
+                        bz = i['bugzilla']
+                severity = i['severity']
+                rhsas = ""
+                if i.has_key('advisories'):
+                    rhsas = "{0: >2}".format(len(i['advisories']))
+                pkgs = ""
+                if i.has_key('affected_packages'):
+                    pkgs = "{0: >2}".format(len(i['affected_packages']))
+                cvss2 = ""
+                if i.has_key('cvss_score'):
+                    cvss2 = str(i['cvss_score'])
+                cvss3 = ""
+                if i.has_key('cvss3_score'):
+                    cvss3 = str(i['cvss3_score'])
+                line = [cve, date, bz, severity, cvss2, cvss3, rhsas, pkgs] 
+                rows.append(line)
+            return self._columnize(rows, sep="  ")
+
+    def _columnize(self, rows, sep="  "):
+        """Columnize (a la column -t) input list of lists, returning string.
+        Credit: http://stackoverflow.com/a/12065663
+        """
+        widths = [ max(map(len, col)) for col in zip(*rows) ]
+        output = []
+        for row in rows:
+            output.append(sep.join((val.ljust(width) for val,width in zip(row, widths))))
+        return "\n".join(output)
 
     def _err_print_support_urls(self, msg=None):
         """Print error + support urls."""
@@ -911,67 +951,6 @@ class ApiClient:
             logger.error(msg)
         print("\nFor help, open an issue at http://github.com/ryran/rhsecapi\n"
               "Or post a comment at https://access.redhat.com/discussions/2713931", file=sys.stderr)
-
-    # def _iavm_query(self, url):
-    #     """Get IAVA json from IAVM Mapper App."""
-    #     logger.info("Getting {0}".format(url))
-    #     try:
-    #         r = requests.get(url, auth=())
-    #     except requests.exceptions.ConnectionError as e:
-    #         self._err_print_support_urls(e)
-    #         raise
-    #     except requests.exceptions.RequestException as e:
-    #         self._err_print_support_urls(e)
-    #         raise
-    #     except requests.exceptions.HTTPError as e:
-    #         self._err_print_support_urls(e)
-    #         raise
-    #     r.raise_for_status()
-    #     baseurl = r.url.split("/")[-1]
-    #     if not baseurl:
-    #         baseurl = r.url.split("/")[-2]
-    #     logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
-    #     if 'application/json' in r.headers['Content-Type']:
-    #          result = r.json()
-    #     elif '<title>Login - Red Hat Customer Portal</title>' in r.content:
-    #         logger.error("Login error")
-    #         print("\nIAVA→CVE mapping data is not provided by the public RH Security Data API.\n"
-    #               "Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).\n\n"
-    #               "Access to this data requires RH Customer Portal credentials be provided.\n"
-    #               "Create a ~/.netrc with the following contents:\n\n"
-    #               "machine access.redhat.com\n"
-    #               "  login YOUR-CUSTOMER-PORTAL-LOGIN\n"
-    #               "  password YOUR_PASSWORD_HERE",
-    #               file=sys.stderr)
-    #         self._err_print_support_urls()
-    #         return []
-    #     return result
-
-    # def get_iava(self, iavaId):
-    #     """Validate IAVA number and return json."""
-    #     # Get main IAVA master index
-    #     url = 'https://access.redhat.com/labs/iavmmapper/api/iava/'
-    #     result = self._iavm_query(url)
-    #     if not result:
-    #         # If no result, we're not logged in & error has already been logged
-    #         return []
-    #     if iavaId in result:
-    #         logger.debug("IAVM Mapper app main index contains '{0}'".format(iavaId))
-    #     else:
-    #         logger.error("IAVM Mapper app main index doesn't contain '{0}'".format(iavaId))
-    #         self._err_print_support_urls()
-    #         return []
-    #     # Get specific IAVA now
-    #     url += '{0}'.format(iavaId)
-    #     try:
-    #         result = self._iavm_query(url)
-    #     except requests.exceptions.HTTPError as e:
-    #         logger.info(e)
-    #         logger.error("IAVM Mapper app doesn't have entry for '{0}'".format(iavaId))
-    #         self._err_print_support_urls()
-    #         return []
-    #     logger.log(25, "{0} CVEs found with search".format(len(result['IAVM']['CVEs']['CVENumber'])))
-    #     return result
 
 
 if __name__ == "__main__":

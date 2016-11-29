@@ -46,7 +46,7 @@ if not (path.isfile(path.expanduser('~/.rhsecapi-no-argcomplete')) or path.isfil
 prog = 'rhsecapi'
 vers = {}
 vers['version'] = '1.0.0_rc8'
-vers['date'] = '2016/11/27'
+vers['date'] = '2016/11/29'
 
 
 # Logging
@@ -199,7 +199,7 @@ def parse_args():
         help="Select what page number to return (default: 1); only relevant when there are more than PAGESZ results")
     g_listByAttr.add_argument(
         '--q-raw', metavar="RAWQUERY", action='append',
-        help="Narrow down results by RAWQUERY (e.g.: '--q-raw a=x --q-raw b=y'); this allows passing arbitrary params (e.g. something new that is unsupported by {0})".format(prog))
+        help="Narrow down results by RAWQUERY (e.g.: '--q-raw a=x --q-raw b=y'); this allows passing arbitrary params (e.g. something new that is unknown to {0})".format(prog))
     # New group
     g_listByIava = p.add_argument_group(
         'RETRIEVE SPECIFIC IAVAS')
@@ -338,69 +338,50 @@ def parse_args():
 
 def main(opts):
     apiclient = rhsda.ApiClient(opts.loglevel)
-    apiclient.cfg.apiUrl = 'https://accessci.usersys.redhat.com/labs/securitydataapi'
-    searchOutput = []
-    iavaOutput = []
+    # apiclient.cfg.apiUrl = 'https://accessci.usersys.redhat.com/labs/securitydataapi'
+    searchOutput = ""
+    iavaOutput = ""
     cveOutput = ""
     if opts.doSearch:
-        result = apiclient.cve_search_query(opts.searchParams, 'json')
         if opts.extract_search:
+            result = apiclient.cve_search_query(params=opts.searchParams, outFormat='list')
             for cve in result:
-                opts.cves.append(cve['CVE'])
-        elif not opts.count:
-            if opts.json:
-                searchOutput.append(rhsda.jprint(result))
-            else:
-                for cve in result:
-                    searchOutput.append(cve['CVE'] + "\n")
+                opts.cves.append(cve)
+        elif opts.count:
+            result = apiclient.cve_search_query(params=opts.searchParams)
+        else:
+            searchOutput = apiclient.cve_search_query(params=opts.searchParams, outFormat=opts.outFormat, urls=opts.printUrls)
+            if not opts.json:
+                searchOutput += "\n"
             if not opts.pastebin:
                 print(file=sys.stderr)
-                print("".join(searchOutput), end="")
+                print(searchOutput, end="")
     elif opts.iavas:
         logger.debug("IAVAs: {0}".format(opts.iavas))
         if opts.extract_search:
-            oF = 'list'
+            result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count, outFormat='list')
+            opts.cves.extend(result)
+        elif opts.count:
+            result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count)
         else:
-            oF = opts.outFormat
-        iavaOutput = apiclient.mget_iavas(iavas=opts.iavas,
-                                          numThreads=opts.threads,
-                                          onlyCount=opts.count,
-                                          outFormat=oF,
-                                          urls=opts.printUrls)
-        if iavaOutput:
-            if opts.extract_search:
-                opts.cves.extend(iavaOutput)
-            elif not opts.count:
-                if opts.json:
-                    iavaOutput.append(rhsda.jprint(result))
-                # else:
-                    # for iava in result:
-                    #     for cve in iava['cvelist']:
-                    #         iavaOutput.append(cve + "\n")
-                if not opts.pastebin:
-                    print(file=sys.stderr)
-                    print(iavaOutput, end="")
+            iavaOutput = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, outFormat=opts.outFormat, urls=opts.printUrls)
+            if not opts.pastebin:
+                print(file=sys.stderr)
+                print(iavaOutput, end="")
     if opts.dryrun and opts.cves:
         logger.log(25, "Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
         cveOutput = " ".join(opts.cves) + "\n"
     elif opts.cves:
         if searchOutput or iavaOutput:
             print(file=sys.stderr)
-        cveOutput = apiclient.mget_cves(cves=opts.cves,
-                                        numThreads=opts.threads,
-                                        onlyCount=opts.count,
-                                        outFormat=opts.outFormat,
-                                        urls=opts.printUrls,
-                                        fields=opts.fields,
-                                        wrapWidth=opts.wrapWidth,
-                                        product=opts.product)
+        cveOutput = apiclient.mget_cves(cves=opts.cves, numThreads=opts.threads, onlyCount=opts.count, outFormat=opts.outFormat, urls=opts.printUrls, fields=opts.fields, wrapWidth=opts.wrapWidth, product=opts.product)
     if opts.count:
         return
     if opts.pastebin:
         opts.p_lang = 'text'
-        if opts.json or not opts.cves:
+        if opts.json:
             opts.p_lang = 'Python'
-        data = "".join(searchOutput) + "".join(iavaOutput) + cveOutput
+        data = searchOutput + iavaOutput + cveOutput
         try:
             response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.pexpire)
         except ValueError as e:
