@@ -216,7 +216,7 @@ def parse_args():
         '-s', '--extract-search', action='store_true',
         help="Extract CVEs from search query (as initiated by at least one of the --q-xxx options or the --iava option)")
     g_getCve.add_argument(
-        '-0', '--extract-stdin', action='store_true',
+        '-0', '--stdin', action='store_true',
         help="Extract CVEs from stdin (CVEs will be matched by case-insensitive regex '{0}' and duplicates will be discarded); note that terminal width auto-detection is not possible in this mode and WIDTH defaults to '70' (but can be overridden with '--width')".format(rhsda.cve_regex_string))
     # New group
     g_cveDisplay = p.add_argument_group(
@@ -265,7 +265,7 @@ def parse_args():
         help="Set time in days after which paste will be deleted (defaults to '28'; specify '0' to disable expiration; DAYS defaults to '1' if option is used but DAYS is omitted)")
     g_general.add_argument(
         '--dryrun', action='store_true',
-        help="Skip CVE retrieval; this option only makes sense in concert with --extract-stdin, for the purpose of quickly getting a printable list of CVE ids from stdin")
+        help="Skip CVE retrieval; this option only makes sense in concert with --stdin, for the purpose of quickly getting a printable list of CVE ids from stdin")
     g_general.add_argument(
         '-h', dest='showUsage', action='store_true',
         help="Show short usage summary and exit")
@@ -314,7 +314,7 @@ def parse_args():
         o.cves = rhsda.extract_cves_from_input(o.cves, "cmdline")
         if not o.cves:
             o.showUsage = True
-    if o.extract_stdin and not sys.stdin.isatty():
+    if o.stdin and not sys.stdin.isatty():
         found = rhsda.extract_cves_from_input(sys.stdin)
         o.cves.extend(found)
     # If no search (--q-xxx) and no CVEs mentioned
