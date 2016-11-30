@@ -365,19 +365,17 @@ class ApiClient:
         """Strip whitespace from input or input list."""
         text = ""
         if isinstance(input, list):
-            for i in input:
-                text += i.encode('utf-8').strip()
-                if oneLineEach:
-                    text += "\n"
-                else:
-                    text += "  "
+            if oneLineEach:
+                text = "\n".join(input).encode('utf-8').strip()
+            else:
+                text = "  ".join(input).encode('utf-8').strip()
         else:
             text = input.encode('utf-8').strip()
         if oneLineEach:
             text = "\n" + text
-            text = re.sub(r"\n+", "\n   ", text)
+            text = re.sub(r"\n[\n\s]*", "\n   ", text)
         else:
-            text = re.sub(r"\n+", "  ", text)
+            text = re.sub(r"\n[\n\s]*", "  ", text)
             if self.wrapper:
                 text = "\n" + "\n".join(self.wrapper.wrap(text))
         return text
@@ -445,7 +443,7 @@ class ApiClient:
                     out[-1] += " (http://cwe.mitre.org/data/definitions/{0}.html)".format(cwes[0].lstrip("CWE-"))
                 else:
                     for c in cwes:
-                        out.append("            (http://cwe.mitre.org/data/definitions/{0}.html)".format(c.lstrip("CWE-")))
+                        out.append("             (http://cwe.mitre.org/data/definitions/{0}.html)".format(c.lstrip("CWE-")))
         # CVSS2
         if self.__check_field('cvss', J):
             vector = J['cvss']['cvss_scoring_vector']
