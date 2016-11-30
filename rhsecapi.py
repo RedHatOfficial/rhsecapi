@@ -358,7 +358,7 @@ def main(opts):
             if not opts.pastebin:
                 print(file=sys.stderr)
                 print(searchOutput, end="")
-    elif opts.iavas:
+    if opts.iavas:
         logger.debug("IAVAs: {0}".format(opts.iavas))
         if opts.extract_search:
             result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count, outFormat='list')

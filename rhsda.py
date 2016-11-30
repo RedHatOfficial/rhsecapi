@@ -572,19 +572,16 @@ class ApiClient:
                 out.append("{0}\n  Not present in Red Hat IAVA database".format(iava))
                 out.append("")
                 return False, "\n".join(out)
+        numCves = len(J['cvelist'])
         # If json output requested
         if self.cfg.outFormat.startswith('json'):
-            return True, J
-        # If CVE list output requested
-        elif self.cfg.outFormat == 'list':
-            cves = J['cvelist']
-            if cves:
-                return True, cves
-            else:
-                return None, []
-        # Return no output if only counting
+            return True, J, numCves
+        # If CVE list output
+        elif self.cfg.outFormat == 'list': 
+            return True, J['cvelist'], numCves
+        # If onlyCount requested
         elif self.cfg.onlyCount:
-            return True, ""
+            return True, "", numCves
         # IAVA NUMBER
         u = ""
         if self.cfg.urls:
@@ -606,7 +603,7 @@ class ApiClient:
                 out.append("   {0}{1}".format(cve, u))
         # Add one final newline to the end
         out.append("")
-        return True, "\n".join(out)
+        return True, "\n".join(out), numCves
 
     def _set_cve_plaintext_fields(self, desiredFields):
         logger.debug("Requested fields string: '{0}'".format(desiredFields))
@@ -847,7 +844,7 @@ class ApiClient:
         else:
             pool.close()
         pool.join()
-        successValues, iavaOutput = zip(*results)
+        successValues, iavaOutput, numCves = zip(*results)
         n_total = len(iavas)
         n_hidden = successValues.count(None)
         n_valid = successValues.count(True)
@@ -855,15 +852,14 @@ class ApiClient:
         logger.log(25, "Valid Red Hat IAVA results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
         if n_invalid:
             logger.log(25, "Invalid IAVA queries: {0} of {1}".format(n_invalid, n_total))
+        logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
         if outFormat == 'list':
             cves = []
-            for i in iavaOutput:
-                cves.extend(i)
-            logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(len(cves)))
-        if onlyCount:
-            return
-        if outFormat == 'list':
+            for cvelist in iavaOutput:
+                cves.extend(cvelist)
             return cves
+        elif onlyCount:
+            return
         if outFormat == 'plaintext':
             # Remove all blank entries (created when spotlight-product hides a CVE)
             iavaOutput = list(iavaOutput)
