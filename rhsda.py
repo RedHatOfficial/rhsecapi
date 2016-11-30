@@ -153,14 +153,14 @@ def extract_cves_from_input(obj, descriptiveNoun=None):
     if found:
         matchCount = len(found)
         # Converting to a set removes duplicates
-        found = list(set(found))
+        found = list(set([x.upper() for x in found]))
         uniqueCount = len(found)
         if matchCount-uniqueCount:
             dupes = "; {0} duplicates removed".format(matchCount-uniqueCount)
         else:
             dupes = ""
         logger.log(25, "Found {0} CVEs on {1}{2}".format(uniqueCount, descriptiveNoun, dupes))
-        return [x.upper() for x in found]
+        return found
     else:
         logger.warning("No CVEs (matching regex: '{0}') found on {1}".format(cve_regex_string, descriptiveNoun))
         return []
