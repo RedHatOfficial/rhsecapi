@@ -46,7 +46,7 @@ if not (path.isfile(path.expanduser('~/.rhsecapi-no-argcomplete')) or path.isfil
 prog = 'rhsecapi'
 vers = {}
 vers['version'] = '1.0.0_rc8'
-vers['date'] = '2016/11/29'
+vers['date'] = '2016/12/01'
 
 
 # Logging
@@ -307,9 +307,12 @@ def parse_args():
         o.doSearch = False
     else:
         o.doSearch = True
-    # if o.q_iava and o.doSearch:
-    #     logger.error("The --q-iava option is incompatible with other --q-xxx options; it can only be used alone")
-    #     sys.exit(1)
+        if o.iavas:
+            print("{0}: error: --q-xxx options not allowed in concert with -i/--iava".format(prog), file=sys.stderr)
+            sys.exit(1)
+        if o.cves or o.stdin:
+            print("{0}: error: --q-xxx options not allowed in concert with CVE args".format(prog), file=sys.stderr)
+            sys.exit(1)
     if o.cves:
         o.cves = rhsda.extract_cves_from_input(o.cves, "cmdline")
         if not o.cves:
@@ -319,7 +322,7 @@ def parse_args():
         o.cves.extend(found)
     # If no search (--q-xxx) and no CVEs mentioned
     if not o.showUsage and not (o.doSearch or o.cves or o.iavas):
-        logger.error("Must specify a search to perform (one of the --q-xxx opts) or CVEs or IAVAs to retrieve")
+        logger.error("Must specify CVEs/IAVAs to retrieve or a search to perform (--q-xxx opts)")
         o.showUsage = True
     if o.showUsage:
         p.print_usage()
