@@ -213,7 +213,7 @@ class ApiClient:
             baseurl = r.url.split("/")[-2]
         logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
         r.raise_for_status()
-        if 'application/xml' in r.headers['Content-Type']:
+        if r.content == 'No match found.' or 'application/json' not in r.headers['Content-Type']:
             return r.content
         else:
             return r.json()
@@ -564,14 +564,19 @@ class ApiClient:
             # Store json
             J = self.get_iava(iava)
         except requests.exceptions.HTTPError as e:
+            ### LEAVING THIS HERE FOR NOW IN ANTICIPATION OF FUTURE API CHANGE
             # IAVA not in RH IAVA DB
             logger.info(e)
             if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
-                return False, ""
+                return False, "", 0
             else:
-                out.append("{0}\n  Not present in Red Hat IAVA database".format(iava))
-                out.append("")
-                return False, "\n".join(out)
+                return False, "{0}\n  Not present in Red Hat IAVA database\n".format(iava), 0
+        if J == 'No match found.':
+            # IAVA not in RH IAVA DB
+            if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
+                return False, "", 0
+            else:
+                return False, "{0}\n  Not present in Red Hat IAVA database\n".format(iava), 0
         numCves = len(J['cvelist'])
         # If json output requested
         if self.cfg.outFormat.startswith('json'):
@@ -846,7 +851,8 @@ class ApiClient:
         n_hidden = successValues.count(None)
         n_valid = successValues.count(True)
         logger.log(25, "Valid Red Hat IAVA results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
-        logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
+        if sum(numCves):
+            logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
         if outFormat == 'list':
             cves = []
             for cvelist in iavaOutput:

@@ -524,6 +524,7 @@ CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
 ## Full help page
 
 ```
+$ rhsecapi --help
 usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
                 [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
                 [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
