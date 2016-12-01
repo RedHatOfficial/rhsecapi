@@ -373,13 +373,20 @@ def main(opts):
             if not opts.pastebin:
                 print(file=sys.stderr)
                 print(iavaOutput, end="")
-    if opts.dryrun and opts.cves:
-        logger.log(25, "Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
-        cveOutput = " ".join(opts.cves) + "\n"
-    elif opts.cves:
-        if searchOutput or iavaOutput:
-            print(file=sys.stderr)
-        cveOutput = apiclient.mget_cves(cves=opts.cves, numThreads=opts.threads, onlyCount=opts.count, outFormat=opts.outFormat, urls=opts.printUrls, fields=opts.fields, wrapWidth=opts.wrapWidth, product=opts.product)
+    if opts.cves:
+        originalCount = len(opts.cves)
+        # Converting to a set removes duplicates
+        opts.cves = list(set(opts.cves))
+        dupesRemoved = originalCount - len(opts.cves)
+        if dupesRemoved:
+            logger.log(25, "{0} duplicate CVEs removed".format(dupesRemoved))
+        if opts.dryrun:
+            logger.log(25, "Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
+            cveOutput = " ".join(opts.cves) + "\n"
+        else:
+            if iavaOutput:
+                print(file=sys.stderr)
+            cveOutput = apiclient.mget_cves(cves=opts.cves, numThreads=opts.threads, onlyCount=opts.count, outFormat=opts.outFormat, urls=opts.printUrls, fields=opts.fields, wrapWidth=opts.wrapWidth, product=opts.product)
     if opts.count:
         return
     if opts.pastebin:

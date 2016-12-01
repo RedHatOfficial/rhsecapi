@@ -151,15 +151,15 @@ def extract_cves_from_input(obj, descriptiveNoun=None):
         # Iterate over each line adding the returned list to our found list
         found.extend(cve_regex.findall(line))
     if found:
-        matchCount = len(found)
+        originalCount = len(found)
         # Converting to a set removes duplicates
         found = list(set([x.upper() for x in found]))
-        uniqueCount = len(found)
-        if matchCount-uniqueCount:
-            dupes = "; {0} duplicates removed".format(matchCount-uniqueCount)
+        dupesRemoved = originalCount - len(found)
+        if dupesRemoved:
+            dupes = "; {0} duplicates removed".format(dupesRemoved)
         else:
             dupes = ""
-        logger.log(25, "Found {0} CVEs on {1}{2}".format(uniqueCount, descriptiveNoun, dupes))
+        logger.log(25, "Found {0} CVEs on {1}{2}".format(len(found), descriptiveNoun, dupes))
         return found
     else:
         logger.warning("No CVEs (matching regex: '{0}') found on {1}".format(cve_regex_string, descriptiveNoun))
@@ -386,7 +386,7 @@ class ApiClient:
             return True
         return False
 
-    def _parse_cve_to_plaintext(self, cve):
+    def _get_and_parse_cve(self, cve):
         """Generate a plaintext representation of a CVE.
 
         This is designed with only one argument in order to allow being used as a worker
@@ -549,7 +549,7 @@ class ApiClient:
         out.append("")
         return True, "\n".join(out)
 
-    def _parse_iava_to_plaintext(self, iava):
+    def _get_and_parse_iava(self, iava):
         """Generate a plaintext representation of an IAVA.
 
         This is designed with only one argument in order to allow being used as a worker
@@ -758,7 +758,7 @@ class ApiClient:
         signal.signal(signal.SIGINT, original_sigint_handler)
         # Allow cancelling with Ctrl-c
         try:
-            p = pool.map_async(self._parse_cve_to_plaintext, cves)
+            p = pool.map_async(self._get_and_parse_cve, cves)
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(timeout=timeout)
         except KeyboardInterrupt:
@@ -834,7 +834,7 @@ class ApiClient:
         signal.signal(signal.SIGINT, original_sigint_handler)
         # Allow cancelling with Ctrl-c
         try:
-            p = pool.map_async(self._parse_iava_to_plaintext, iavas)
+            p = pool.map_async(self._get_and_parse_iava, iavas)
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(timeout=timeout)
         except KeyboardInterrupt:
@@ -861,13 +861,6 @@ class ApiClient:
         elif onlyCount:
             return
         if outFormat == 'plaintext':
-            # Remove all blank entries (created when spotlight-product hides a CVE)
-            iavaOutput = list(iavaOutput)
-            while 1:
-                try:
-                    iavaOutput.remove("")
-                except ValueError:
-                    break
             return "\n".join(iavaOutput)
         elif outFormat == 'json':
             return iavaOutput
@@ -938,13 +931,6 @@ class ApiClient:
         for row in rows:
             output.append(sep.join((val.ljust(width) for val,width in zip(row, widths))))
         return "\n".join(output)
-
-    def _err_print_support_urls(self, msg=None):
-        """Print error + support urls."""
-        if msg:
-            logger.error(msg)
-        print("\nFor help, open an issue at http://github.com/ryran/rhsecapi\n"
-              "Or post a comment at https://access.redhat.com/discussions/2713931", file=sys.stderr)
 
 
 if __name__ == "__main__":
