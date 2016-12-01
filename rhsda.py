@@ -151,16 +151,16 @@ def extract_cves_from_input(obj, descriptiveNoun=None):
         # Iterate over each line adding the returned list to our found list
         found.extend(cve_regex.findall(line))
     if found:
-        matchCount = len(found)
+        originalCount = len(found)
         # Converting to a set removes duplicates
-        found = list(set(found))
-        uniqueCount = len(found)
-        if matchCount-uniqueCount:
-            dupes = "; {0} duplicates removed".format(matchCount-uniqueCount)
+        found = list(set([x.upper() for x in found]))
+        dupesRemoved = originalCount - len(found)
+        if dupesRemoved:
+            dupes = "; {0} duplicates removed".format(dupesRemoved)
         else:
             dupes = ""
-        logger.log(25, "Found {0} CVEs on {1}{2}".format(uniqueCount, descriptiveNoun, dupes))
-        return [x.upper() for x in found]
+        logger.log(25, "Found {0} CVEs on {1}{2}".format(len(found), descriptiveNoun, dupes))
+        return found
     else:
         logger.warning("No CVEs (matching regex: '{0}') found on {1}".format(cve_regex_string, descriptiveNoun))
         return []
@@ -182,7 +182,7 @@ class ApiClient:
         return w
 
     def __validate_data_type(self, dT):
-        dataTypes = ['cvrf', 'cve', 'oval']
+        dataTypes = ['cvrf', 'cve', 'oval', 'iava']
         if dT not in dataTypes:
             raise ValueError("Invalid data type ('{0}') requested; should be one of: {1}".format(dT, ", ".join(dataTypes)))
 
@@ -243,13 +243,13 @@ class ApiClient:
                    page=None, per_page=None):
         """Find CVRF documents by recent or attributes.
 
-        Provides an index to recent CVRF documents with a summary of their contents,
-        when no parameters are passed. Returns a convenience object as the response with
-        minimal attributes. 
+        Provides an index to recent CVRF documents when no parameters are passed.
+        Each list item is a convenience object with minimal attributes.
+        Use parameters to narrow down results.
 
         With *outFormat* of "json", returns JSON object.
         With *outFormat* of "xml", returns unformatted XML as string.
-        If *params* dict is passed, additional parameters are ignored.  
+        If *params* dict is passed, additional parameters are ignored.
         """
         if not params:
             params = {
@@ -270,12 +270,13 @@ class ApiClient:
                   page=None, per_page=None):
         """Find CVEs by recent or attributes.
 
-        Provides an index to recent CVEs when no parameters are passed. Returns a
-        convenience object as response with minimal attributes. 
+        Provides an index to recent CVEs when no parameters are passed.
+        Each list item is a convenience object with minimal attributes.
+        Use parameters to narrow down results.
  
         With *outFormat* of "json", returns JSON object.
         With *outFormat* of "xml", returns unformatted XML as string.
-        If *params* dict is passed, additional parameters are ignored.  
+        If *params* dict is passed, additional parameters are ignored.
         """
         if not params:
             params = {
@@ -298,13 +299,13 @@ class ApiClient:
                    page=None, per_page=None):
         """Find OVAL definitions by recent or attributes.
 
-        Provides an index to recent OVAL definitions with a summary of their contents,
-        when no parameters are passed. Returns a convenience object as the response with
-        minimal attributes.
+        Provides an index to recent OVAL definitions when no parameters are passed.
+        Each list item is a convenience object with minimal attributes.
+        Use parameters to narrow down results.
 
         With *outFormat* of "json", returns JSON object.
         With *outFormat* of "xml", returns unformatted XML as string.
-        If *params* dict is passed, additional parameters are ignored.  
+        If *params* dict is passed, additional parameters are ignored.
         """
         if not params:
             params = {
@@ -317,6 +318,28 @@ class ApiClient:
                 'per_page': per_page,
                 }
         return self._find('oval', params, outFormat)
+
+    def find_iavas(self, params=None, outFormat='json',
+                   number=None, severity=None,
+                   page=None, per_page=None):
+        """Find IAVA notices by recent or attributes.
+
+        Provides an index to recent IAVA notices when no parameters are passed.
+        Each list item is a convenience object with minimal attributes.
+        Use parameters to narrow down results.
+
+        With *outFormat* of "json", returns JSON object.
+        With *outFormat* of "xml", returns unformatted XML as string.
+        If *params* dict is passed, additional parameters are ignored.
+        """
+        if not params:
+            params = {
+                'number': number,
+                'severity': severity,
+                'page': page,
+                'per_page': per_page,
+                }
+        return self._find('iava', params, outFormat)
 
     def get_cvrf(self, rhsa, outFormat='json'):
         """Retrieve CVRF details for an RHSA."""
@@ -334,23 +357,25 @@ class ApiClient:
         """Retrieve OVAL details for an RHSA."""
         return self._retrieve('oval', rhsa, outFormat)
 
+    def get_iava(self, iava, outFormat='json'):
+        """Retrieve notice details for an IAVA."""
+        return self._retrieve('iava', iava, outFormat)
+
     def __stripjoin(self, input, oneLineEach=False):
         """Strip whitespace from input or input list."""
         text = ""
         if isinstance(input, list):
-            for i in input:
-                text += i.encode('utf-8').strip()
-                if oneLineEach:
-                    text += "\n"
-                else:
-                    text += "  "
+            if oneLineEach:
+                text = "\n".join(input).encode('utf-8').strip()
+            else:
+                text = "  ".join(input).encode('utf-8').strip()
         else:
             text = input.encode('utf-8').strip()
         if oneLineEach:
             text = "\n" + text
-            text = re.sub(r"\n+", "\n   ", text)
+            text = re.sub(r"\n[\n\s]*", "\n   ", text)
         else:
-            text = re.sub(r"\n+", "  ", text)
+            text = re.sub(r"\n[\n\s]*", "  ", text)
             if self.wrapper:
                 text = "\n" + "\n".join(self.wrapper.wrap(text))
         return text
@@ -361,12 +386,12 @@ class ApiClient:
             return True
         return False
 
-    def _parse_cve_to_plaintext(self, cve):
+    def _get_and_parse_cve(self, cve):
         """Generate a plaintext representation of a CVE.
 
         This is designed with only one argument in order to allow being used as a worker
         with multiprocessing.Pool.map_async().
-        
+
         Various printing operations in this method are conditional upon (or are tweaked
         by) the values in the self.cfg namespace as set in parent meth self.mget_cves().
         """
@@ -402,35 +427,35 @@ class ApiClient:
             u = ""
             if self.cfg.urls:
                 u = " (https://access.redhat.com/security/updates/classification)"
-            out.append("  SEVERITY: {0} Impact{1}".format(J['threat_severity'], u))
+            out.append("  SEVERITY : {0} Impact{1}".format(J['threat_severity'], u))
         # PUBLIC_DATE
         if self.__check_field('public_date', J):
-            out.append("  DATE:     {0}".format(J['public_date'].split("T")[0]))
+            out.append("  DATE     : {0}".format(J['public_date'].split("T")[0]))
         # IAVA
         if self.__check_field('iava', J):
-            out.append("  IAVA:     {0}".format(J['iava']))
+            out.append("  IAVA     : {0}".format(J['iava']))
         # CWE ID
         if self.__check_field('cwe', J):
-            out.append("  CWE:      {0}".format(J['cwe']))
+            out.append("  CWE      : {0}".format(J['cwe']))
             if self.cfg.urls:
                 cwes = re.findall("CWE-[0-9]+", J['cwe'])
                 if len(cwes) == 1:
                     out[-1] += " (http://cwe.mitre.org/data/definitions/{0}.html)".format(cwes[0].lstrip("CWE-"))
                 else:
                     for c in cwes:
-                        out.append("            (http://cwe.mitre.org/data/definitions/{0}.html)".format(c.lstrip("CWE-")))
+                        out.append("             (http://cwe.mitre.org/data/definitions/{0}.html)".format(c.lstrip("CWE-")))
         # CVSS2
         if self.__check_field('cvss', J):
             vector = J['cvss']['cvss_scoring_vector']
             if self.cfg.urls:
                 vector = "http://nvd.nist.gov/cvss.cfm?version=2&vector={0}".format(vector)
-            out.append("  CVSS:     {0} ({1})".format(J['cvss']['cvss_base_score'], vector))
+            out.append("  CVSS     : {0} ({1})".format(J['cvss']['cvss_base_score'], vector))
         # CVSS3
         if self.__check_field('cvss3', J):
             vector = J['cvss3']['cvss3_scoring_vector']
             if self.cfg.urls:
                 vector = "https://www.first.org/cvss/calculator/3.0#{0}".format(vector)
-            out.append("  CVSS3:    {0} ({1})".format(J['cvss3']['cvss3_base_score'], vector))
+            out.append("  CVSS3    : {0} ({1})".format(J['cvss3']['cvss3_base_score'], vector))
         # BUGZILLA
         if 'bugzilla' in self.cfg.desiredFields:
             if J.has_key('bugzilla'):
@@ -438,35 +463,35 @@ class ApiClient:
                     bug = J['bugzilla']['url']
                 else:
                     bug = J['bugzilla']['id']
-                out.append("  BUGZILLA: {0}".format(bug))
+                out.append("  BUGZILLA : {0}".format(bug))
             else:
-                out.append("  BUGZILLA: No Bugzilla data")
+                out.append("  BUGZILLA : No Bugzilla data")
                 out.append("   Too new or too old? See: https://bugzilla.redhat.com/show_bug.cgi?id=CVE_legacy")
         # ACKNOWLEDGEMENT
         if self.__check_field('acknowledgement', J):
-            out.append("  ACKNOWLEDGEMENT:  {0}".format(self.__stripjoin(J['acknowledgement'])))
+            out.append("  ACKNOWLEDGEMENT :  {0}".format(self.__stripjoin(J['acknowledgement'])))
         # DETAILS
         if self.__check_field('details', J):
-            out.append("  DETAILS:  {0}".format(self.__stripjoin(J['details'])))
+            out.append("  DETAILS  : {0}".format(self.__stripjoin(J['details'])))
         # STATEMENT
         if self.__check_field('statement', J):
-            out.append("  STATEMENT:  {0}".format(self.__stripjoin(J['statement'])))
+            out.append("  STATEMENT : {0}".format(self.__stripjoin(J['statement'])))
         # MITIGATION
         if self.__check_field('mitigation', J):
-            out.append("  MITIGATION:  {0}".format(self.__stripjoin(J['mitigation'])))
+            out.append("  MITIGATION : {0}".format(self.__stripjoin(J['mitigation'])))
         # UPSTREAM FIX
         if self.__check_field('upstream_fix', J):
-            out.append("  UPSTREAM_FIX:  {0}".format(J['upstream_fix']))
+            out.append("  UPSTREAM_FIX : {0}".format(J['upstream_fix']))
         # REFERENCES
         if self.__check_field('references', J):
-            out.append("  REFERENCES:{0}".format(self.__stripjoin(J['references'], oneLineEach=True)))
+            out.append("  REFERENCES :{0}".format(self.__stripjoin(J['references'], oneLineEach=True)))
         # AFFECTED RELEASE
         foundProduct_affected_release = False
         if self.__check_field('affected_release', J):
             if self.cfg.product:
-                out.append("  FIXED_RELEASES matching '{0}':".format(self.cfg.product))
+                out.append("  FIXED_RELEASES matching '{0}' :".format(self.cfg.product))
             else:
-                out.append("  FIXED_RELEASES:")
+                out.append("  FIXED_RELEASES :")
             affected_release = J['affected_release']
             if isinstance(affected_release, dict):
                 # When there's only one, it doesn't show up in a list
@@ -484,7 +509,7 @@ class ApiClient:
                 advisory = release['advisory']
                 if self.cfg.urls:
                     advisory = "https://access.redhat.com/errata/{0}".format(advisory)
-                out.append("   {0}{1}: {2}".format(release['product_name'], pkg, advisory))
+                out.append("   {0}:{1} via {2} ({3})".format(release['product_name'], pkg, advisory, release['release_date'].split("T")[0]))
             if self.cfg.product and not foundProduct_affected_release:
                 # If nothing found, remove the "FIXED_RELEASES" heading
                 out.pop()
@@ -492,9 +517,9 @@ class ApiClient:
         foundProduct_package_state = False
         if self.__check_field('package_state', J):
             if self.cfg.product:
-                out.append("  FIX_STATES matching '{0}':".format(self.cfg.product))
+                out.append("  FIX_STATES matching '{0}' :".format(self.cfg.product))
             else:
-                out.append("  FIX_STATES:")
+                out.append("  FIX_STATES :")
             package_state = J['package_state']
             if isinstance(package_state, dict):
                 # When there's only one, it doesn't show up in a list
@@ -523,6 +548,62 @@ class ApiClient:
         # Add one final newline to the end
         out.append("")
         return True, "\n".join(out)
+
+    def _get_and_parse_iava(self, iava):
+        """Generate a plaintext representation of an IAVA.
+
+        This is designed with only one argument in order to allow being used as a worker
+        with multiprocessing.Pool.map_async().
+
+        Various printing operations in this method are conditional upon (or are tweaked
+        by) the values in the self.cfg namespace as set in parent meth self.mget_iavas().
+        """
+        # Output array:
+        out = []
+        try:
+            # Store json
+            J = self.get_iava(iava)
+        except requests.exceptions.HTTPError as e:
+            # IAVA not in RH IAVA DB
+            logger.info(e)
+            if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
+                return False, ""
+            else:
+                out.append("{0}\n  Not present in Red Hat IAVA database".format(iava))
+                out.append("")
+                return False, "\n".join(out)
+        numCves = len(J['cvelist'])
+        # If json output requested
+        if self.cfg.outFormat.startswith('json'):
+            return True, J, numCves
+        # If CVE list output
+        elif self.cfg.outFormat == 'list': 
+            return True, J['cvelist'], numCves
+        # If onlyCount requested
+        elif self.cfg.onlyCount:
+            return True, "", numCves
+        # IAVA NUMBER
+        u = ""
+        if self.cfg.urls:
+            u = " ({0}/iava?number={1})".format(self.cfg.apiUrl, iava)
+        out.append("{0}{1}".format(iava, u))
+        # TITLE
+        out.append("  TITLE    : {0}".format(J['title']))
+        # SEVERITY
+        out.append("  SEVERITY : {0}".format(J['severity']))
+        # ID
+        out.append("  ID       : {0}".format(J['id']))
+        # CVELIST
+        if J['cvelist']:
+            out.append("  CVES     :")
+            for cve in J['cvelist']:
+                u = ""
+                if self.cfg.urls:
+                    u = " (https://access.redhat.com/security/cve/{0})".format(cve)
+                out.append("   {0}{1}".format(cve, u))
+        # Add one final newline to the end
+        out.append("")
+        return True, "\n".join(out), numCves
 
     def _set_cve_plaintext_fields(self, desiredFields):
         logger.debug("Requested fields string: '{0}'".format(desiredFields))
@@ -591,7 +672,7 @@ class ApiClient:
                   urls=False, fields='ALL', wrapWidth=70, product=None, timeout=300):
         """Use multi-threading to lookup a list of CVEs and return text output.
 
-        *cves*:       A list of CVE ids or a str obj from which to regex CVE ids
+        *cves*:       A list of CVE ids or a str/file obj from which to regex CVE ids
         *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
         *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
         *outFormat*:  Control output format ("plaintext", "json", or "jsonpretty")
@@ -677,7 +758,7 @@ class ApiClient:
         signal.signal(signal.SIGINT, original_sigint_handler)
         # Allow cancelling with Ctrl-c
         try:
-            p = pool.map_async(self._parse_cve_to_plaintext, cves)
+            p = pool.map_async(self._get_and_parse_cve, cves)
             # Need to specify timeout; see: http://stackoverflow.com/a/35134329
             results = p.get(timeout=timeout)
         except KeyboardInterrupt:
@@ -691,12 +772,9 @@ class ApiClient:
         n_total = len(cves)
         n_hidden = successValues.count(None)
         n_valid = successValues.count(True)
-        n_invalid = successValues.count(False)
         logger.log(25, "Valid Red Hat CVE results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
         if product:
             logger.log(25, "Results matching spotlight-product option: {0} of {1}".format(n_valid, n_total))
-        if n_invalid:
-            logger.log(25, "Invalid CVE queries: {0} of {1}".format(n_invalid, n_total))
         if onlyCount:
             return
         if outFormat == 'plaintext':
@@ -713,7 +791,77 @@ class ApiClient:
         elif outFormat == 'jsonpretty':
             return jprint(cveOutput)
 
-    def cve_search_query(self, params, outFormat='list'):
+    def mget_iavas(self, iavas, numThreads=0, onlyCount=False, outFormat='plaintext',
+                   urls=False, timeout=300):
+        """Use multi-threading to lookup a list of IAVAs and return text output.
+
+        *iavas*:      A list of IAVA ids
+        *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
+        *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
+        *outFormat*:  Control output format ("list", "plaintext", "json", or "jsonpretty")
+        *urls*:       Whether to add extra URLs to certain fields
+        *timeout*:    Total ammount of time to wait for all CVEs to be retrieved
+
+        ON *OUTFORMAT*:
+
+        Setting to "list" returns list object containing ONLY CVE ids.
+        Setting to "plaintext" returns str object containing formatted output.
+        Setting to "json" returns list object (i.e., original JSON)
+        Setting to "jsonpretty" returns str object containing prettified JSON
+        """
+        if outFormat not in ['list', 'plaintext', 'json', 'jsonpretty']:
+            raise ValueError("Invalid outFormat ('{0}') requested; should be one of: 'list', 'plaintext', 'json', 'jsonpretty'".format(outFormat))
+        if not isinstance(iavas, list):
+            raise ValueError("Invalid 'iavas=' argument input; must be list obj")
+        # Configure threads
+        if not numThreads:
+            numThreads = numThreadsDefault
+        # Lower threads for small work-loads 
+        if numThreads > len(iavas):
+            numThreads = len(iavas)
+        logger.info("Using {0} worker threads".format(numThreads))
+        # Set cfg directives for our worker
+        self.cfg.onlyCount = onlyCount
+        self.cfg.outFormat = outFormat
+        self.cfg.urls = urls
+        # Disable sigint before starting process pool
+        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        pool = multiprocessing.Pool(processes=numThreads)
+        # Re-enable receipt of sigint
+        signal.signal(signal.SIGINT, original_sigint_handler)
+        # Allow cancelling with Ctrl-c
+        try:
+            p = pool.map_async(self._get_and_parse_iava, iavas)
+            # Need to specify timeout; see: http://stackoverflow.com/a/35134329
+            results = p.get(timeout=timeout)
+        except KeyboardInterrupt:
+            logger.error("Received KeyboardInterrupt; terminating worker threads")
+            pool.terminate()
+            raise
+        else:
+            pool.close()
+        pool.join()
+        successValues, iavaOutput, numCves = zip(*results)
+        n_total = len(iavas)
+        n_hidden = successValues.count(None)
+        n_valid = successValues.count(True)
+        logger.log(25, "Valid Red Hat IAVA results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
+        logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
+        if outFormat == 'list':
+            cves = []
+            for cvelist in iavaOutput:
+                cves.extend(cvelist)
+            return cves
+        elif onlyCount:
+            return
+        if outFormat == 'plaintext':
+            return "\n".join(iavaOutput)
+        elif outFormat == 'json':
+            return iavaOutput
+        elif outFormat == 'jsonpretty':
+            return jprint(iavaOutput)
+
+    def cve_search_query(self, params, outFormat='list', urls=False):
         """Perform a CVE search query.
 
         ON *OUTFORMAT*:
@@ -730,82 +878,53 @@ class ApiClient:
             return result
         if outFormat == 'jsonpretty':
             return jprint(result)
-        cves = []
-        for i in result:
-            cves.append(i['CVE'])
         if outFormat == 'list':
+            cves = []
+            for i in result:
+                cves.append(i['CVE'])
             return cves
         if outFormat == 'plaintext':
-            return "\n".join(cves)
+            rows = []
+            rows.append(["CVE ID", "PUB DATE", "BUGZILLA", "SEVERITY", "CVSS2", "CVSS3",  "RHSAS", "PKGS"])
+            for i in result:
+                date = ""
+                if i.has_key('public_date'):
+                    date = i['public_date'].split("T")[0]
+                bz = ""
+                if urls:
+                    cve = "https://access.redhat.com/security/cve/{0}".format(i['CVE'])
+                    if i.has_key('bugzilla'):
+                        bz = "https://bugzilla.redhat.com/show_bug.cgi?id={0}".format(i['bugzilla'])
+                else:
+                    cve = i['CVE']
+                    if i.has_key('bugzilla'):
+                        bz = i['bugzilla']
+                severity = i['severity']
+                rhsas = ""
+                if i.has_key('advisories'):
+                    rhsas = "{0: >2}".format(len(i['advisories']))
+                pkgs = ""
+                if i.has_key('affected_packages'):
+                    pkgs = "{0: >2}".format(len(i['affected_packages']))
+                cvss2 = ""
+                if i.has_key('cvss_score'):
+                    cvss2 = str(i['cvss_score'])
+                cvss3 = ""
+                if i.has_key('cvss3_score'):
+                    cvss3 = str(i['cvss3_score'])
+                line = [cve, date, bz, severity, cvss2, cvss3, rhsas, pkgs] 
+                rows.append(line)
+            return self._columnize(rows, sep="  ")
 
-    def _err_print_support_urls(self, msg=None):
-        """Print error + support urls."""
-        if msg:
-            logger.error(msg)
-        print("\nFor help, open an issue at http://github.com/ryran/rhsecapi\n"
-              "Or post a comment at https://access.redhat.com/discussions/2713931", file=sys.stderr)
-
-    def _iavm_query(self, url):
-        """Get IAVA json from IAVM Mapper App."""
-        logger.info("Getting {0}".format(url))
-        try:
-            r = requests.get(url, auth=())
-        except requests.exceptions.ConnectionError as e:
-            self._err_print_support_urls(e)
-            raise
-        except requests.exceptions.RequestException as e:
-            self._err_print_support_urls(e)
-            raise
-        except requests.exceptions.HTTPError as e:
-            self._err_print_support_urls(e)
-            raise
-        r.raise_for_status()
-        baseurl = r.url.split("/")[-1]
-        if not baseurl:
-            baseurl = r.url.split("/")[-2]
-        logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
-        if 'application/json' in r.headers['Content-Type']:
-             result = r.json()
-        elif '<title>Login - Red Hat Customer Portal</title>' in r.content:
-            logger.error("Login error")
-            print("\nIAVA→CVE mapping data is not provided by the public RH Security Data API.\n"
-                  "Instead, this uses the IAVM Mapper App (access.redhat.com/labs/iavmmapper).\n\n"
-                  "Access to this data requires RH Customer Portal credentials be provided.\n"
-                  "Create a ~/.netrc with the following contents:\n\n"
-                  "machine access.redhat.com\n"
-                  "  login YOUR-CUSTOMER-PORTAL-LOGIN\n"
-                  "  password YOUR_PASSWORD_HERE",
-                  file=sys.stderr)
-            self._err_print_support_urls()
-            return []
-        return result
-
-
-    def get_iava(self, iavaId):
-        """Validate IAVA number and return json."""
-        # Get main IAVA master index
-        url = 'https://access.redhat.com/labs/iavmmapper/api/iava/'
-        result = self._iavm_query(url)
-        if not result:
-            # If no result, we're not logged in & error has already been logged
-            return []
-        if iavaId in result:
-            logger.debug("IAVM Mapper app main index contains '{0}'".format(iavaId))
-        else:
-            logger.error("IAVM Mapper app main index doesn't contain '{0}'".format(iavaId))
-            self._err_print_support_urls()
-            return []
-        # Get specific IAVA now
-        url += '{0}'.format(iavaId)
-        try:
-            result = self._iavm_query(url)
-        except requests.exceptions.HTTPError as e:
-            logger.info(e)
-            logger.error("IAVM Mapper app doesn't have entry for '{0}'".format(iavaId))
-            self._err_print_support_urls()
-            return []
-        logger.log(25, "{0} CVEs found with search".format(len(result['IAVM']['CVEs']['CVENumber'])))
-        return result
+    def _columnize(self, rows, sep="  "):
+        """Columnize (a la column -t) input list of lists, returning string.
+        Credit: http://stackoverflow.com/a/12065663
+        """
+        widths = [ max(map(len, col)) for col in zip(*rows) ]
+        output = []
+        for row in rows:
+            output.append(sep.join((val.ljust(width) for val,width in zip(row, widths))))
+        return "\n".join(output)
 
 
 if __name__ == "__main__":
