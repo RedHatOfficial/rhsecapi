@@ -205,7 +205,7 @@ def parse_args():
         'RETRIEVE SPECIFIC IAVAS')
     g_listByIava.add_argument(
         '-i', '--iava', dest='iavas', metavar='YYYY-?-NNNN', action='append', 
-        help="Retrieve notice details for an IAVA number; specify option multiple times to retrieve multiple IAVAs at once (use below --extract-search option to lookup mapped CVEs)")
+        help="Retrieve notice details for an IAVA number; specify option multiple times to retrieve multiple IAVAs at once (use below --extract-cves option to lookup mapped CVEs)")
     # New group
     g_getCve = p.add_argument_group(
         'RETRIEVE SPECIFIC CVES')
@@ -213,7 +213,7 @@ def parse_args():
         'cves', metavar="CVE-YYYY-NNNN", nargs='*',
         help="Retrieve a CVE or list of CVEs (e.g.: 'CVE-2016-5387'); note that case-insensitive regex-matching is done -- extra characters & duplicate CVEs will be discarded")
     g_getCve.add_argument(
-        '-s', '--extract-search', action='store_true',
+        '-x', '--extract-cves', action='store_true',
         help="Extract CVEs from search query (as initiated by at least one of the --q-xxx options or the --iava option)")
     g_getCve.add_argument(
         '-0', '--stdin', action='store_true',
@@ -348,7 +348,7 @@ def main(opts):
     iavaOutput = ""
     cveOutput = ""
     if opts.doSearch:
-        if opts.extract_search:
+        if opts.extract_cves:
             result = apiclient.cve_search_query(params=opts.searchParams, outFormat='list')
             for cve in result:
                 opts.cves.append(cve)
@@ -363,7 +363,7 @@ def main(opts):
                 print(searchOutput, end="")
     if opts.iavas:
         logger.debug("IAVAs: {0}".format(opts.iavas))
-        if opts.extract_search:
+        if opts.extract_cves:
             result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count, outFormat='list')
             opts.cves.extend(result)
         elif opts.count:

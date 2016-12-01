@@ -772,12 +772,9 @@ class ApiClient:
         n_total = len(cves)
         n_hidden = successValues.count(None)
         n_valid = successValues.count(True)
-        n_invalid = successValues.count(False)
         logger.log(25, "Valid Red Hat CVE results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
         if product:
             logger.log(25, "Results matching spotlight-product option: {0} of {1}".format(n_valid, n_total))
-        if n_invalid:
-            logger.log(25, "Invalid CVE queries: {0} of {1}".format(n_invalid, n_total))
         if onlyCount:
             return
         if outFormat == 'plaintext':
@@ -848,10 +845,7 @@ class ApiClient:
         n_total = len(iavas)
         n_hidden = successValues.count(None)
         n_valid = successValues.count(True)
-        n_invalid = successValues.count(False)
         logger.log(25, "Valid Red Hat IAVA results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
-        if n_invalid:
-            logger.log(25, "Invalid IAVA queries: {0} of {1}".format(n_invalid, n_total))
         logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
         if outFormat == 'list':
             cves = []
