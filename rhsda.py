@@ -213,10 +213,10 @@ class ApiClient:
             baseurl = r.url.split("/")[-2]
         logger.debug("Return '.../{0}': Status {1}, Content-Type {2}".format(baseurl, r.status_code, r.headers['Content-Type'].split(";")[0]))
         r.raise_for_status()
-        if r.content == 'No match found.' or 'application/json' not in r.headers['Content-Type']:
-            return r.content
-        else:
+        if 'application/json' in r.headers['Content-Type']:
             return r.json()
+        else:
+            return r.content
 
     def _find(self, dataType, params, outFormat):
         self.__validate_data_type(dataType)
@@ -564,15 +564,8 @@ class ApiClient:
             # Store json
             J = self.get_iava(iava)
         except requests.exceptions.HTTPError as e:
-            ### LEAVING THIS HERE FOR NOW IN ANTICIPATION OF FUTURE API CHANGE
             # IAVA not in RH IAVA DB
             logger.info(e)
-            if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
-                return False, "", 0
-            else:
-                return False, "{0}\n  Not present in Red Hat IAVA database\n".format(iava), 0
-        if J == 'No match found.':
-            # IAVA not in RH IAVA DB
             if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
                 return False, "", 0
             else:
