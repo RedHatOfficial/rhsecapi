@@ -185,8 +185,9 @@ sys	0m0.055s
 ```
 $ rhsecapi -h
 usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
-                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
-                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
+                [--q-advisory RHSA] [--q-severity IMPACT]
+                [--q-product PRODUCT] [--q-package PKG] [--q-cwe CWEID]
+                [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [-i YYYY-?-NNNN] [-x] [-0] [-f FIELDS | -a | -m] [-p PRODUCT]
                 [-j] [-u] [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}]
@@ -196,7 +197,7 @@ usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
 Run rhsecapi --help for full help page
 
 VERSION:
-  rhsecapi v1.0.0_rc8 last mod 2016/12/01
+  rhsecapi v1.0.0_rc10 last mod 2017/01/05
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
@@ -204,12 +205,13 @@ VERSION:
 
 ```
 $ rhsecapi --[TabTab]
---all-fields    --iava          --product       --q-cvss3       --q-raw
---count         --json          --q-advisory    --q-cwe         --q-severity
---dryrun        --loglevel      --q-after       --q-empty       --stdin
---extract-cves  --most-fields   --q-before      --q-package     --threads
---fields        --pastebin      --q-bug         --q-pagenum     --urls
---help          --pexpire       --q-cvss        --q-pagesize    --wrap
+--all-fields    --json          --q-after       --q-package     --threads
+--count         --loglevel      --q-before      --q-pagenum     --urls
+--dryrun        --most-fields   --q-bug         --q-pagesize    --wrap
+--extract-cves  --pastebin      --q-cvss        --q-product     
+--fields        --pexpire       --q-cvss3       --q-raw         
+--help          --product       --q-cwe         --q-severity    
+--iava          --q-advisory    --q-empty       --stdin         
 ```
 
 ## Field display
@@ -297,10 +299,10 @@ CVE-2016-8734     2016-11-29  1397403   moderate   3.5    4.4     0      0
 (output truncated for brevity of this README)
 ```
 
-Customize how many results to see and print; add URLs.
+Customize how many results to see and print; add URLs. The `--q-empty` switch is no longer needed here since there are other `--q-xxx` options present.
 
 ```
-$ rhsecapi --loglevel info --q-empty --q-pagesize 4 --q-pagenum 3 --urls 
+$ rhsecapi --loglevel info --q-pagesize 4 --q-pagenum 3 --urls 
 [INFO   ] rhsda: Getting https://access.redhat.com/labs/securitydataapi/cve.json?per_page=4&page=3
 [NOTICE ] rhsda: 4 CVEs found with search query
 
@@ -353,9 +355,9 @@ Other possibilities:
 
 ```
 $ rhsecapi --q-[TabTab]
---q-advisory  --q-bug       --q-cwe       --q-pagenum   --q-severity
---q-after     --q-cvss      --q-empty     --q-pagesize  
---q-before    --q-cvss3     --q-package   --q-raw       
+--q-advisory  --q-bug       --q-cwe       --q-pagenum   --q-raw       
+--q-after     --q-cvss      --q-empty     --q-pagesize  --q-severity  
+--q-before    --q-cvss3     --q-package   --q-product   
 ```
 
 Narrowing it down ...
@@ -526,8 +528,9 @@ CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
 ```
 $ rhsecapi --help
 usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
-                [--q-advisory RHSA] [--q-severity IMPACT] [--q-package PKG]
-                [--q-cwe CWEID] [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
+                [--q-advisory RHSA] [--q-severity IMPACT]
+                [--q-product PRODUCT] [--q-package PKG] [--q-cwe CWEID]
+                [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
                 [-i YYYY-?-NNNN] [-x] [-0] [-f FIELDS | -a | -m] [-p PRODUCT]
                 [-j] [-u] [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}]
@@ -548,6 +551,12 @@ FIND CVES BY ATTRIBUTE:
                         more, e.g.: 'RHSA-2016:0614,RHSA-2016:0610')
   --q-severity IMPACT   Narrow down results by severity rating (specify one of
                         'low', 'moderate', 'important', or 'critical')
+  --q-product PRODUCT   Narrow down results by product name via case-
+                        insensitive regex (e.g.: 'linux 7' or openstack
+                        platform [89]'); the API checks this against the
+                        'FIXED_RELEASES' field so will only match CVEs where
+                        PRODUCT matches the 'product_name' of some released
+                        errata
   --q-package PKG       Narrow down results by package name (e.g.: 'samba' or
                         'thunderbird')
   --q-cwe CWEID         Narrow down results by CWE ID (specify one or more,
@@ -647,7 +656,7 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v1.0.0_rc8 last mod 2016/12/01
+  rhsecapi v1.0.0_rc10 last mod 2017/01/05
   See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
 ```
 
@@ -712,12 +721,13 @@ NAME
     rhsda
 
 FILE
-    /g/dev-rhsecapi/rhsda.py
+    /usr/share/rhsecapi/rhsda.py
 
 DESCRIPTION
     # -*- coding: utf-8 -*-
     #-------------------------------------------------------------------------------
-    # Copyright 2016 Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
+    # Copyright 2016, 2017
+    #  Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
     #
     #    This program is free software: you can redistribute it and/or modify
     #    it under the terms of the GNU General Public License as published by
@@ -752,7 +762,7 @@ CLASSES
      |      Setting to "json" returns list object containing original JSON.
      |      Setting to "jsonpretty" returns str object containing prettified JSON.
      |  
-     |  find_cves(self, params=None, outFormat='json', before=None, after=None, bug=None, advisory=None, severity=None, package=None, cwe=None, cvss_score=None, cvss3_score=None, page=None, per_page=None)
+     |  find_cves(self, params=None, outFormat='json', before=None, after=None, bug=None, advisory=None, severity=None, product=None, package=None, cwe=None, cvss_score=None, cvss3_score=None, page=None, per_page=None)
      |      Find CVEs by recent or attributes.
      |      
      |      Provides an index to recent CVEs when no parameters are passed.
