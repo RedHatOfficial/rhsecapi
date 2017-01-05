@@ -1,7 +1,8 @@
 #!/usr/bin/python2
 # -*- coding: utf-8 -*-
 #-------------------------------------------------------------------------------
-# Copyright 2016 Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
+# Copyright 2016, 2017
+#  Ryan Sawhill Aroha <rsaw@redhat.com> and rhsecapi contributors
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -266,7 +267,7 @@ class ApiClient:
 
     def find_cves(self, params=None, outFormat='json',
                   before=None, after=None, bug=None, advisory=None, severity=None,
-                  package=None, cwe=None, cvss_score=None, cvss3_score=None,
+                  product=None, package=None, cwe=None, cvss_score=None, cvss3_score=None,
                   page=None, per_page=None):
         """Find CVEs by recent or attributes.
 
@@ -285,6 +286,7 @@ class ApiClient:
                 'bug': bug,
                 'advisory': advisory,
                 'severity': severity,
+                'product': product,
                 'package': package,
                 'cwe': cwe,
                 'cvss_score': cvss_score,
