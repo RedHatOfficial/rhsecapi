@@ -384,7 +384,7 @@ class ApiClient:
 
     def __check_field(self, field, jsoninput):
         """Return True if field is desired and exists in jsoninput."""
-        if field in self.cfg.desiredFields and jsoninput.has_key(field):
+        if field in self.cfg.desiredFields and field in jsoninput:
             return True
         return False
 
@@ -460,7 +460,7 @@ class ApiClient:
             out.append("  CVSS3    : {0} ({1})".format(J['cvss3']['cvss3_base_score'], vector))
         # BUGZILLA
         if 'bugzilla' in self.cfg.desiredFields:
-            if J.has_key('bugzilla'):
+            if 'bugzilla' in J:
                 if self.cfg.urls:
                     bug = J['bugzilla']['url']
                 else:
@@ -506,7 +506,7 @@ class ApiClient:
                         # If product doesn't match spotlight, go to next
                         continue
                 pkg = ""
-                if release.has_key('package'):
+                if 'package' in release:
                     pkg = " [{0}]".format(release['package'])
                 advisory = release['advisory']
                 if self.cfg.urls:
@@ -534,7 +534,7 @@ class ApiClient:
                         # If product doesn't match spotlight, go to next
                         continue
                 pkg = ""
-                if state.has_key('package_name'):
+                if 'package_name' in state:
                     pkg = " [{0}]".format(state['package_name'])
                 out.append("   {0}: {1}{2}".format(state['fix_state'], state['product_name'], pkg))
             if self.cfg.product and not foundProduct_package_state:
@@ -889,30 +889,32 @@ class ApiClient:
             rows.append(["CVE ID", "PUB DATE", "BUGZILLA", "SEVERITY", "CVSS2", "CVSS3",  "RHSAS", "PKGS"])
             for i in result:
                 date = ""
-                if i.has_key('public_date'):
+                if 'public_date' in i and i['public_date'] is not None:
                     date = i['public_date'].split("T")[0]
                 bz = ""
                 if urls:
                     cve = "https://access.redhat.com/security/cve/{0}".format(i['CVE'])
-                    if i.has_key('bugzilla'):
+                    if 'bugzilla' in i and i['bugzilla'] is not None:
                         bz = "https://bugzilla.redhat.com/show_bug.cgi?id={0}".format(i['bugzilla'])
                 else:
                     cve = i['CVE']
-                    if i.has_key('bugzilla'):
+                    if 'bugzilla' in i and i['bugzilla'] is not None:
                         bz = i['bugzilla']
-                severity = i['severity']
-                rhsas = ""
-                if i.has_key('advisories'):
-                    rhsas = "{0: >2}".format(len(i['advisories']))
-                pkgs = ""
-                if i.has_key('affected_packages'):
-                    pkgs = "{0: >2}".format(len(i['affected_packages']))
+                severity = ""
+                if 'severity' in i and i['severity'] is not None:
+                    severity = i['severity']
                 cvss2 = ""
-                if i.has_key('cvss_score'):
+                if 'cvss_score' in i and i['cvss_score'] is not None:
                     cvss2 = str(i['cvss_score'])
                 cvss3 = ""
-                if i.has_key('cvss3_score'):
+                if 'cvss3_score' in i and i['cvss3_score'] is not None:
                     cvss3 = str(i['cvss3_score'])
+                rhsas = ""
+                if 'advisories' in i and i['advisories'] is not None:
+                    rhsas = "{0: >2}".format(len(i['advisories']))
+                pkgs = ""
+                if 'affected_packages' in i and i['affected_packages'] is not None:
+                    pkgs = "{0: >2}".format(len(i['affected_packages']))
                 line = [cve, date, bz, severity, cvss2, cvss3, rhsas, pkgs] 
                 rows.append(line)
             return self._columnize(rows, sep="  ")

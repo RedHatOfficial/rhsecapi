@@ -46,8 +46,8 @@ if not (path.isfile(path.expanduser('~/.rhsecapi-no-argcomplete')) or path.isfil
 # Globals
 prog = 'rhsecapi'
 vers = {}
-vers['version'] = '1.0.0_rc10'
-vers['date'] = '2017/01/05'
+vers['version'] = '1.0.1'
+vers['date'] = '2017/06/27'
 
 
 # Logging
@@ -179,7 +179,7 @@ def parse_args():
         help="Narrow down results by severity rating (specify one of 'low', 'moderate', 'important', or 'critical')")
     g_listByAttr.add_argument(
         '--q-product', metavar="PRODUCT",
-        help="Narrow down results by product name via case-insensitive regex (e.g.: 'linux 7' or openstack platform [89]'); the API checks this against the 'FIXED_RELEASES' field so will only match CVEs where PRODUCT matches the 'product_name' of some released errata")
+        help="Narrow down results by product name via case-insensitive regex (e.g.: 'linux 7' or 'openstack platform [89]'); the API checks this against the 'FIXED_RELEASES' field so will only match CVEs where PRODUCT matches the 'product_name' of some released errata")
     g_listByAttr.add_argument(
         '--q-package', metavar="PKG",
         help="Narrow down results by package name (e.g.: 'samba' or 'thunderbird')")
