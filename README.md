@@ -552,7 +552,7 @@ FIND CVES BY ATTRIBUTE:
   --q-severity IMPACT   Narrow down results by severity rating (specify one of
                         'low', 'moderate', 'important', or 'critical')
   --q-product PRODUCT   Narrow down results by product name via case-
-                        insensitive regex (e.g.: 'linux 7' or openstack
+                        insensitive regex (e.g.: 'linux 7' or 'openstack
                         platform [89]'); the API checks this against the
                         'FIXED_RELEASES' field so will only match CVEs where
                         PRODUCT matches the 'product_name' of some released
