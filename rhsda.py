@@ -632,7 +632,7 @@ class ApiClient:
         for f in fields:
             # Skip unknown fields
             if f not in cveFields.all_plus_aliases:
-                logger.warning("Field '{0}' is not a known field; valid fields:\n{2}".format(f, ", ".join(cveFields.all_plus_aliases)))
+                logger.warning("Field '{0}' is not a known field; valid fields:\n{1}".format(f, ", ".join(cveFields.all_plus_aliases)))
                 continue
             # Look-up aliases
             if f not in cveFields.all:
