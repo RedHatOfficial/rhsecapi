@@ -31,13 +31,7 @@ from argparse import Namespace
 
 
 # Logging
-logging.addLevelName(25, 'NOTICE')
-consolehandler = logging.StreamHandler()
-consolehandler.setLevel('DEBUG')
-consolehandler.setFormatter(logging.Formatter("[%(levelname)-7s] %(name)s: %(message)s"))
-logger = logging.getLogger('rhsda')
-logger.setLevel('NOTICE')
-logger.addHandler(consolehandler)
+logger = logging.getLogger(__name__)
 
 
 # Establish cveFields namespace
@@ -176,7 +170,6 @@ class ApiClient:
     def __init__(self, logLevel='notice'):
         self.cfg = Namespace()
         self.cfg.apiUrl = 'https://access.redhat.com/labs/securitydataapi'
-        logger.setLevel(logLevel.upper())
 
     def _get_terminal_width(self):
         h, w, hp, wp = struct.unpack('HHHH', fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack('HHHH', 0, 0, 0, 0)))

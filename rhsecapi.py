@@ -48,15 +48,21 @@ prog = 'rhsecapi'
 vers = {}
 vers['version'] = '1.0.1'
 vers['date'] = '2017/06/27'
+logLevels = {
+    'DEBUG': logging.DEBUG,
+    'INFO': logging.INFO,
+    'WARNING': logging.WARNING,
+    'NOTICE': 25,
+    'ERROR': logging.ERROR,
+}
+
 
 
 # Logging
-logging.addLevelName(25, 'NOTICE')
+logging.addLevelName(logLevels['NOTICE'], 'NOTICE')
 consolehandler = logging.StreamHandler()
-consolehandler.setLevel('DEBUG')
 consolehandler.setFormatter(logging.Formatter("[%(levelname)-7s] %(name)s: %(message)s"))
-logger = logging.getLogger('rhsecapi')
-logger.setLevel('NOTICE')
+logger = logging.getLogger()
 logger.addHandler(consolehandler)
 
 
@@ -340,7 +346,7 @@ def parse_args():
         o.outFormat = 'jsonpretty'
     else:
         o.outFormat = 'plaintext'
-    logger.setLevel(o.loglevel.upper())
+    logger.setLevel(logLevels[o.loglevel.upper()])
     return o
 
 
