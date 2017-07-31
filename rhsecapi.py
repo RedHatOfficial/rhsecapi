@@ -256,8 +256,8 @@ def parse_args():
         '-c', '--count', action='store_true',
         help="Exit after printing CVE counts")
     g_general.add_argument(
-        '-l', '--loglevel', choices=['debug','info','notice','warning'], default='notice',
-        help="Configure logging level threshold; lower from the default of 'notice' to see extra details printed to stderr")
+        '-l', '--loglevel', choices=['debug','info','notice','warning','error'], default='warning',
+        help="Configure logging level threshold; lower from the default of 'warning' to see extra details printed to stderr")
     g_general.add_argument(
         '-t', '--threads', metavar="THREDS", type=int, default=rhsda.numThreadsDefault,
         help="Set number of concurrent worker threads to allow when making CVE queries (default on this system: {0})".format(rhsda.numThreadsDefault))
