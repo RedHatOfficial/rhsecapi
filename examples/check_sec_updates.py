@@ -22,7 +22,7 @@ from json import dumps as json_dump
 from json import loads as json_load
 import logging
 from logging import debug, info, warning, critical
-from rpmUtils.miscutils import splitFilename
+from rpmUtils.miscutils import splitFilename, compareEVR
 
 exitvals = {
     'OK': 0,
@@ -70,6 +70,7 @@ def main(input = stdin, quiet = False):
     try:
         installed_packages = dict()
         os_maj_version = None
+        os_min_version = None
         os_name = None
         api = ApiClient(logLevel='error')
 
@@ -98,11 +99,14 @@ def main(input = stdin, quiet = False):
 
             # Check if it's the OS release package (redhat-release, centos-release,
             # fedora-release [note: not supported!]
-            re_result = rematch(r"""^(\w+)-release.*""", name)
+            re_result = rematch(r"""^(fedora|redhat|centos)-release.*""", name)
             if re_result:
                 os_name = re_result.group(1)
+                if os_name == 'fedora':
+                    print('Fedora is not supported yet')
+                    exit(0)
                 re_result = rematch(r"""^(\d+).*""", version)
-                (os_maj_version, ) = re_result.group(1)
+                os_maj_version = re_result.group(1)
 
             # Figure out which package is the latest and skip packages with the same
             # NVR, but different arch
@@ -133,7 +137,12 @@ def main(input = stdin, quiet = False):
                     float(installed_packages[name]['buildtime'])
             ).strftime("%Y-%m-%d")
 
-            product = "(linux %s)" % os_maj_version
+            # Querying with minor release doesn't work (ATM?)
+            if os_min_version and 1 == 0:
+                product = "(linux %s.%s)" % (os_maj_version, os_min_version)
+            else:
+                product = "(linux %s)" % os_maj_version
+            debug('Query product: %s' % product)
 
             # Check if we already have any information in the database
             query = session.query(CVE_cache).filter_by(
@@ -153,12 +162,19 @@ def main(input = stdin, quiet = False):
                     debug('Item: %s' % item)
                     packages = []
                     for pkg in item['affected_packages']:
-                        pkg_name = splitFilename(pkg)[0]
+                        # TODO? We do not care about epoch ATM
+                        (pkg_name, pkg_version, pkg_release) = splitFilename(pkg)[0:3]
+
                         if pkg_name == name:
-                            packages.append(pkg)
+                            print('pkg: %s' % pkg_name)
+                            if compareEVR([0, pkg_version, pkg_release],
+                                    [0, installed_packages[name]['version'],
+                                        installed_packages[name]['release']]) > 0:
+                                packages.append(pkg)
                         
                     # If some package names match, add it.
                     if packages:
+                        item['affected_packages'] = packages
                         new_data.append(item)
                 data = new_data
 
@@ -185,9 +201,9 @@ def main(input = stdin, quiet = False):
             # We have data, either fresh from the API (web) or from the
             # database
             if data:
-                output_text += '%s has security issues:' % name
+                output_text += '%s has security issues:\n' % name
                 for issue in data:
-                    output_text += '  * %s (%s)\n  - %s\n' % (
+                    output_text += '  * %s (%s)\n    - %s\n' % (
                         issue['bugzilla_description'].rstrip().lstrip(), issue['severity'], issue['resource_url'])
                     if issue['severity'] == 'moderate' and severity != 'important':
                         severity = 'moderate'
