@@ -2,7 +2,12 @@
 
 from sys import stdin, stdout, exit
 from sys import path as syspath
-syspath.append('..')
+from os.path import dirname, abspath
+from os.path import join as pathjoin
+curdir = dirname(abspath(__file__))
+topdir = abspath(pathjoin(curdir, '..'))
+syspath.append(curdir)
+syspath.append(topdir)
 from rhsda import ApiClient
 from re import match as rematch
 from pprint import pprint
@@ -26,10 +31,12 @@ exitvals = {
     'UNKNOWN': 3,
 }
 
+tmppath = '/var/tmp'
+
 #logging.basicConfig(format = '%(message)s', level=logging.DEBUG)
 logging.basicConfig(format = '%(message)s', level=logging.WARNING)
 
-engine = create_engine('sqlite:///updates_cache.db')
+engine = create_engine('sqlite:///%s/updates_cache.db' % tmppath)
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
 
