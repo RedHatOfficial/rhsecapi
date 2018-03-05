@@ -18,14 +18,8 @@ class TestExitCodes(unittest.TestCase):
     def test_warning(self):
         s = StringIO(
 """
-1488124984 redhat-release-server 6Server 6.9.0.4.el6
-1457450163 mc 4.7.0.2 6.el6
-
-# This one has CVEs
-1346670317 libxslt 1.1.26 2.el6_3.1
-
-1258685031 bc 1.06.95 1.el6
-1276766929 gstreamer 0.10.29 1.el6
+1176766929 redhat-release 5Server 5.9.0.5
+576766929 hypervkvpd 0 0.6
 """)
         with self.assertRaises(SystemExit) as cm:
             check_sec_updates.main(input = s, quiet = True)
