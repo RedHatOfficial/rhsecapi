@@ -281,12 +281,7 @@ def parse_args():
         argcomplete.autocomplete(p)
     o = p.parse_args()
     if o.showHelp:
-        from tempfile import NamedTemporaryFile
-        from subprocess import call
-        tmp = NamedTemporaryFile(prefix='{0}-help-'.format(prog), suffix='.txt')
-        p.print_help(file=tmp)
-        tmp.flush()
-        call(['less', tmp.name])
+        p.print_help()
         sys.exit()
     # Add search params to dict
     o.searchParams = {
