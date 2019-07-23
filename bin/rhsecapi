@@ -151,7 +151,7 @@ def parse_args():
     epilog = (
         "VERSION:\n"
         "  {0}\n"
-        "  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs").format(version)
+        "  See <https://github.com/RedHatOfficial/rhsecapi> to report bugs or RFEs").format(version)
     fmt = lambda prog: CustomFormatter(prog)
     p = argparse.ArgumentParser(
         prog=prog,
