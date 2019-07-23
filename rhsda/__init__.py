@@ -24,11 +24,15 @@ import re
 import textwrap, fcntl, termios, struct
 import json
 import signal
-import copy_reg
 import types
-import multiprocessing.dummy as multiprocessing
+import multiprocessing as multiprocessing
 from argparse import Namespace
 
+# Check to see if we are running Python 2 or 3
+try:
+    import copy_reg
+except:
+    import copyreg as copy_reg
 
 # Logging
 logging.addLevelName(25, 'NOTICE')
@@ -72,7 +76,6 @@ cveFields.not_most = [
 cveFields.most = list(cveFields.all)
 for f in cveFields.not_most:
     cveFields.most.remove(f)
-del(f)
 # Simple set of most important fields
 cveFields.base = [
     'threat_severity',
@@ -101,7 +104,6 @@ cveFields.aliases_printable = [
 # A list of all fields + all aliases
 cveFields.all_plus_aliases = list(cveFields.all)
 cveFields.all_plus_aliases.extend([k for k in cveFields.aliases])
-del(k)
 
 
 # Regex to match a CVE id string
@@ -122,10 +124,15 @@ copy_reg.pickle(types.MethodType, _reduce_method)
 
 
 # Set default number of worker threads
-if multiprocessing.cpu_count() <= 2:
+try:
+    hardwareCPUCount = multiprocessing.cpu_count()
+except:
+    hardwareCPUCount = multiprocessing.dummy.cpu_count()
+
+if hardwareCPUCount <= 2:
     numThreadsDefault = 4
 else:
-    numThreadsDefault = multiprocessing.cpu_count() * 2
+    numThreadsDefault = hardwareCPUCount * 2
 
 
 def jprint(jsoninput):
@@ -728,10 +735,20 @@ class ApiClient:
         """
         if outFormat not in ['plaintext', 'json', 'jsonpretty']:
             raise ValueError("Invalid outFormat ('{0}') requested; should be one of: 'plaintext', 'json', 'jsonpretty'".format(outFormat))
-        if isinstance(cves, str) or isinstance(cves, file):
-            cves = extract_cves_from_input(cves)
-        elif not isinstance(cves, list):
-            raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+        # This is necessary as Python3 doesn't have "file" types
+        try:
+            if isinstance(cves, (str, file)):
+                cves = extract_cves_from_input(cves)
+            elif not isinstance(cves, list):
+                raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+        except:
+            from io import IOBase
+
+            if isinstance(cves, (str, IOBase)):
+                cves = extract_cves_from_input(cves)
+            elif not isinstance(cves, list):
+                raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+
         if not len(cves):
             if outFormat in ['plaintext', 'jsonpretty']:
                 return ""
