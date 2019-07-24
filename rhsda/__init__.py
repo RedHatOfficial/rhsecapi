@@ -40,7 +40,7 @@ consolehandler = logging.StreamHandler()
 consolehandler.setLevel('DEBUG')
 consolehandler.setFormatter(logging.Formatter("[%(levelname)-7s] %(name)s: %(message)s"))
 logger = logging.getLogger('rhsda')
-logger.setLevel('NOTICE')
+logger.setLevel('WARNING')
 logger.addHandler(consolehandler)
 
 
