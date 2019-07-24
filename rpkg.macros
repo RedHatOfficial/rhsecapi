@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function git_version {
+    declare name="$(cached git_name)" "$@"
+
+    latest_tag="$(git tag --list --sort=-taggerdate | tail -1)"
+    latest_tag_version="$(echo $latest_tag | sed "s/^v//g")"
+
+    output "${latest_tag_version}"
+}
+
