@@ -205,12 +205,6 @@ def parse_args():
         '--q-raw', metavar="RAWQUERY", action='append',
         help="Narrow down results by RAWQUERY (e.g.: '--q-raw a=x --q-raw b=y'); this allows passing arbitrary params (e.g. something new that is unknown to {0})".format(prog))
     # New group
-    g_listByIava = p.add_argument_group(
-        'RETRIEVE SPECIFIC IAVAS')
-    g_listByIava.add_argument(
-        '-i', '--iava', dest='iavas', metavar='YYYY-?-NNNN', action='append', 
-        help="Retrieve notice details for an IAVA number; specify option multiple times to retrieve multiple IAVAs at once (use below --extract-cves option to lookup mapped CVEs)")
-    # New group
     g_getCve = p.add_argument_group(
         'RETRIEVE SPECIFIC CVES')
     g_getCve.add_argument(
@@ -218,7 +212,7 @@ def parse_args():
         help="Retrieve a CVE or list of CVEs (e.g.: 'CVE-2016-5387'); note that case-insensitive regex-matching is done -- extra characters & duplicate CVEs will be discarded")
     g_getCve.add_argument(
         '-x', '--extract-cves', action='store_true',
-        help="Extract CVEs from search query (as initiated by at least one of the --q-xxx options or the --iava option)")
+        help="Extract CVEs from search query (as initiated by at least one of the --q-xxx options)")
     g_getCve.add_argument(
         '-0', '--stdin', action='store_true',
         help="Extract CVEs from stdin (CVEs will be matched by case-insensitive regex '{0}' and duplicates will be discarded); note that terminal width auto-detection is not possible in this mode and WIDTH defaults to '70' (but can be overridden with '--width')".format(rhsda.cve_regex_string))
@@ -228,7 +222,7 @@ def parse_args():
     g_cveDisplay0 = g_cveDisplay.add_mutually_exclusive_group()
     g_cveDisplay0.add_argument(
         '-f', '--fields', metavar="FIELDS", default='BASE',
-        help="Customize field display via comma-separated case-insensitive list (default: {0}); see --all-fields option for full list of official API-provided fields; shorter field aliases: {1}; optionally prepend FIELDS with plus (+) sign to add fields to the default (e.g., '-f +iava,cvss3') or a caret (^) to remove fields from all-fields (e.g., '-f ^mitigation,severity')".format(", ".join(rhsda.cveFields.base), ", ".join(rhsda.cveFields.aliases_printable)))
+        help="Customize field display via comma-separated case-insensitive list (default: {0}); see --all-fields option for full list of official API-provided fields; shorter field aliases: {1}; optionally prepend FIELDS with plus (+) sign to add fields to the default (e.g., '-f +cvss3') or a caret (^) to remove fields from all-fields (e.g., '-f ^mitigation,severity')".format(", ".join(rhsda.cveFields.base), ", ".join(rhsda.cveFields.aliases_printable)))
     g_cveDisplay0.add_argument(
         '-a', '--all-fields', dest='fields', action='store_const',
         const='ALL',
@@ -307,9 +301,6 @@ def parse_args():
         o.doSearch = False
     else:
         o.doSearch = True
-        if o.iavas:
-            print("{0}: error: --q-xxx options not allowed in concert with -i/--iava".format(prog), file=sys.stderr)
-            sys.exit(1)
         if o.cves or o.stdin:
             print("{0}: error: --q-xxx options not allowed in concert with CVE args".format(prog), file=sys.stderr)
             sys.exit(1)
@@ -321,8 +312,8 @@ def parse_args():
         found = rhsda.extract_cves_from_input(sys.stdin)
         o.cves.extend(found)
     # If no search (--q-xxx) and no CVEs mentioned
-    if not o.showUsage and not (o.doSearch or o.cves or o.iavas):
-        logger.error("Must specify CVEs/IAVAs to retrieve or a search to perform (--q-xxx opts)")
+    if not o.showUsage and not (o.doSearch or o.cves):
+        logger.error("Must specify CVEs to retrieve or a search to perform (--q-xxx opts)")
         o.showUsage = True
     if o.showUsage:
         p.print_usage()
@@ -347,7 +338,6 @@ def main(opts):
         apiclient.cfg.apiUrl = environ['RHSDA_URL']
 
     searchOutput = ""
-    iavaOutput = ""
     cveOutput = ""
     if opts.doSearch:
         if opts.extract_cves:
@@ -363,18 +353,6 @@ def main(opts):
             if not opts.pastebin:
                 print(file=sys.stderr)
                 print(searchOutput, end="")
-    if opts.iavas:
-        logger.debug("IAVAs: {0}".format(opts.iavas))
-        if opts.extract_cves:
-            result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count, outFormat='list')
-            opts.cves.extend(result)
-        elif opts.count:
-            result = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, onlyCount=opts.count)
-        else:
-            iavaOutput = apiclient.mget_iavas(iavas=opts.iavas, numThreads=opts.threads, outFormat=opts.outFormat, urls=opts.printUrls)
-            if not opts.pastebin:
-                print(file=sys.stderr)
-                print(iavaOutput, end="")
     if opts.cves:
         originalCount = len(opts.cves)
         # Converting to a set removes duplicates
@@ -386,8 +364,6 @@ def main(opts):
             logger.log(25, "Skipping CVE retrieval due to --dryrun; would have retrieved: {0}".format(len(opts.cves)))
             cveOutput = " ".join(opts.cves) + "\n"
         else:
-            if iavaOutput:
-                print(file=sys.stderr)
             cveOutput = apiclient.mget_cves(cves=opts.cves, numThreads=opts.threads, onlyCount=opts.count, outFormat=opts.outFormat, urls=opts.printUrls, fields=opts.fields, wrapWidth=opts.wrapWidth, product=opts.product)
     if opts.count:
         return
@@ -395,7 +371,7 @@ def main(opts):
         opts.p_lang = 'text'
         if opts.json:
             opts.p_lang = 'Python'
-        data = searchOutput + iavaOutput + cveOutput
+        data = searchOutput + cveOutput
         try:
             response = fpaste_it(inputdata=data, author=prog, lang=opts.p_lang, expire=opts.pexpire)
         except ValueError as e:
