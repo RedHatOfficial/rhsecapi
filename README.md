@@ -1,8 +1,8 @@
 # rhsecapi
 
-`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/ryran/rhsecapi/issues/29). From the rpm description:
+`rhsecapi` makes it easy to interface with the [Red Hat Security Data API](https://access.redhat.com/documentation/en/red-hat-security-data-api/) -- even from [behind a proxy](https://github.com/RedHatOfficial/rhsecapi/issues/29). From the rpm description:
 
-> **Leverage Red Hat's Security Data API to find CVEs by various attributes (date, severity, scores, package, IAVA, etc). Retrieve customizable details about found CVEs or about specific CVE ids input on cmdline. Parse arbitrary stdin for CVE ids and generate a customized report, optionally sending it straight to pastebin. Searches are done via a single instantaneous http request and CVE retrieval is parallelized, utilizing multiple threads at once. Python requests is used for all remote communication, so proxy support is baked right in. BASH intelligent tab-completion is supported via optional Python argcomplete module. Python2 tested on RHEL6, RHEL7, & Fedora but since it doesn't integrate with RHN/RHSM/yum/Satellite, it can be used on any internet-connected machine. Feedback, feature requests, and code contributions welcome.**
+> **Leverage Red Hat's Security Data API to find CVEs by various attributes (date, severity, scores, package, etc). Retrieve customizable details about found CVEs or about specific CVE ids input on cmdline. Parse arbitrary stdin for CVE ids and generate a customized report, optionally sending it straight to pastebin. Searches are done via a single instantaneous http request and CVE retrieval is parallelized, utilizing multiple threads at once. Python requests is used for all remote communication, so proxy support is baked right in. BASH intelligent tab-completion is supported via optional Python argcomplete module. Python2 tested on RHEL6, RHEL7, & Fedora but since it doesn't integrate with RHN/RHSM/yum/Satellite, it can be used on any internet-connected machine. Feedback, feature requests, and code contributions welcome.**
 
 If you don't have a GitHub account but do have a Red Hat Portal login, go here: [New cmdline tool using Red Hat's new Security Data API: rhsecapi](https://access.redhat.com/discussions/2713931).
 
@@ -15,7 +15,6 @@ If you don't have a GitHub account but do have a Red Hat Portal login, go here: 
 - [Find CVEs](#find-cves)
   - [Empty search: list CVEs by public-date](#empty-search-list-cves-by-public-date)
   - [Find CVEs by attributes](#find-cves-by-attributes)
-- [Working with IAVAs](#working-with-iavas)
 - [Advanced: find unresolved CVEs for a specific package in a specific product](#advanced-find-unresolved-cves-for-a-specific-package-in-a-specific-product)
 - [Full help page](#full-help-page)
 - [Working with backend rhsda library](#working-with-backend-rhsda-library)
@@ -174,7 +173,7 @@ sys	0m0.055s
   1. Execute: `rhsecapi`
 
 - **Option 2: Download latest release from github and run it**
-  1. Go to [Releases](https://github.com/ryran/rhsecapi/releases)
+  1. Go to [Releases](https://github.com/RedHatOfficial/rhsecapi/releases)
   1. Download and extract the latest release
   1. Optional: `mkdir -p ~/bin; ln -sv /PATH/TO/rhsecapi.py ~/bin/rhsecapi`
   1. Execute: `rhsecapi`
@@ -198,7 +197,7 @@ Run rhsecapi --help for full help page
 
 VERSION:
   rhsecapi v1.0.0_rc10 last mod 2017/01/05
-  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
+  See <http://github.com/RedHatOfficial/rhsecapi> to report bugs or RFEs
 ```
 
 ## BASH intelligent tab-completion
@@ -211,7 +210,7 @@ $ rhsecapi --[TabTab]
 --extract-cves  --pastebin      --q-cvss        --q-product     
 --fields        --pexpire       --q-cvss3       --q-raw         
 --help          --product       --q-cwe         --q-severity    
---iava          --q-advisory    --q-empty       --stdin         
+--q-advisory    --q-empty       --stdin         
 ```
 
 ## Field display
@@ -273,11 +272,11 @@ Note that there are also two presets: `--all-fields` and `--most-fields`
 ```
 $ rhsecapi CVE-2016-6302 --loglevel debug --most-fields 2>&1 | grep fields
 [DEBUG  ] rhsda: Requested fields string: 'MOST'
-[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla, upstream_fix, affected_release, package_state'
+[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, cwe, cvss, cvss3, bugzilla, upstream_fix, affected_release, package_state'
 
 $ rhsecapi CVE-2016-6302 --loglevel debug --all-fields 2>&1 | grep fields
 [DEBUG  ] rhsda: Requested fields string: 'ALL'
-[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, mitigation, upstream_fix, references, affected_release, package_state'
+[DEBUG  ] rhsda: Enabled fields: 'threat_severity, public_date, cwe, cvss, cvss3, bugzilla, acknowledgement, details, statement, mitigation, upstream_fix, references, affected_release, package_state'
 ```
 
 ## Find CVEs
@@ -379,68 +378,6 @@ CVE-2015-0235
    RHEV Hypervisor for RHEL-6: [rhev-hypervisor6-6.6-20150123.1.el6ev] via RHSA-2015:0126 (2015-02-04)
 ```
 
-
-### Working with IAVAs
-
-IAVAs can be retrieved instantly ...
-
-```
-$ rhsecapi --iava 2016-A-0287 -i 2016-A-0309 --urls 
-[NOTICE ] rhsda: Valid Red Hat IAVA results retrieved: 2 of 2
-[NOTICE ] rhsda: Number of CVEs mapped from retrieved IAVAs: 5
-
-2016-A-0287 (https://access.redhat.com/labs/securitydataapi/iava?number=2016-A-0287)
-  TITLE    : Multiple Vulnerabilities in Oracle Enterprise Manager
-  SEVERITY : CAT I
-  ID       : 140611
-  CVES     :
-   CVE-2015-7940 (https://access.redhat.com/security/cve/CVE-2015-7940)
-   CVE-2016-2107 (https://access.redhat.com/security/cve/CVE-2016-2107)
-   CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
-   CVE-2016-5604 (https://access.redhat.com/security/cve/CVE-2016-5604)
-
-2016-A-0309 (https://access.redhat.com/labs/securitydataapi/iava?number=2016-A-0309)
-  TITLE    : ISC BIND Remote Denial of Service Vulnerability
-  SEVERITY : CAT I
-  ID       : 140634
-  CVES     :
-   CVE-2016-8864 (https://access.redhat.com/security/cve/CVE-2016-8864)
-```
-
-Each of the mapped CVEs can be looked up by simply adding the `-x`/`--extract-cves` option. (For brevity, the following example also uses `--product`.)
-
-```
-$ rhsecapi --iava 2016-A-0287 -i 2016-A-0309 --urls --extract-cves --product 'linux 6'
-[NOTICE ] rhsda: Valid Red Hat IAVA results retrieved: 2 of 2
-[NOTICE ] rhsda: Number of CVEs mapped from retrieved IAVAs: 5
-[NOTICE ] rhsda: Valid Red Hat CVE results retrieved: 4 of 5
-[NOTICE ] rhsda: Results matching spotlight-product option: 3 of 5
-
-CVE-2016-8864 (https://access.redhat.com/security/cve/CVE-2016-8864)
-  SEVERITY : Important Impact (https://access.redhat.com/security/updates/classification)
-  DATE     : 2016-11-01
-  BUGZILLA : https://bugzilla.redhat.com/show_bug.cgi?id=1389652
-  FIXED_RELEASES matching 'linux 6' :
-   Red Hat Enterprise Linux 6: [bind-32:9.8.2-0.47.rc1.el6_8.3] via https://access.redhat.com/errata/RHSA-2016:2141 (2016-11-02)
-
-CVE-2016-2107 (https://access.redhat.com/security/cve/CVE-2016-2107)
-  SEVERITY : Moderate Impact (https://access.redhat.com/security/updates/classification)
-  DATE     : 2016-05-03
-  BUGZILLA : https://bugzilla.redhat.com/show_bug.cgi?id=1331426
-  FIXED_RELEASES matching 'linux 6' :
-   Red Hat Enterprise Linux 6: [openssl-1.0.1e-48.el6_8.1] via https://access.redhat.com/errata/RHSA-2016:0996 (2016-05-10)
-  FIX_STATES matching 'linux 6' :
-   Not affected: Red Hat Enterprise Linux 6 [openssl098e]
-
-CVE-2016-4979 (https://access.redhat.com/security/cve/CVE-2016-4979)
-  SEVERITY : Moderate Impact (https://access.redhat.com/security/updates/classification)
-  DATE     : 2016-07-05
-  BUGZILLA : https://bugzilla.redhat.com/show_bug.cgi?id=1352476
-  FIX_STATES matching 'linux 6' :
-   Not affected: Red Hat Enterprise Linux 6 [httpd]
-```
-
-
 ## Advanced: find unresolved CVEs for a specific package in a specific product
 
 - **Question:**
@@ -532,9 +469,9 @@ usage: rhsecapi [--q-before YYYY-MM-DD] [--q-after YYYY-MM-DD] [--q-bug BZID]
                 [--q-product PRODUCT] [--q-package PKG] [--q-cwe CWEID]
                 [--q-cvss SCORE] [--q-cvss3 SCORE] [--q-empty]
                 [--q-pagesize PAGESZ] [--q-pagenum PAGENUM] [--q-raw RAWQUERY]
-                [-i YYYY-?-NNNN] [-x] [-0] [-f FIELDS | -a | -m] [-p PRODUCT]
-                [-j] [-u] [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}]
-                [-t THREDS] [-P] [-E [DAYS]] [--dryrun] [-h] [--help]
+                [-x] [-0] [-f FIELDS | -a | -m] [-p PRODUCT] [-j] [-u]
+                [-w [WIDTH]] [-c] [-l {debug,info,notice,warning}] [-t THREDS]
+                [-P] [-E [DAYS]] [--dryrun] [-h] [--help]
                 [CVE-YYYY-NNNN [CVE-YYYY-NNNN ...]]
 
 Make queries against the Red Hat Security Data API
@@ -575,20 +512,13 @@ FIND CVES BY ATTRIBUTE:
                         --q-raw b=y'); this allows passing arbitrary params
                         (e.g. something new that is unknown to rhsecapi)
 
-RETRIEVE SPECIFIC IAVAS:
-  -i, --iava YYYY-?-NNNN
-                        Retrieve notice details for an IAVA number; specify
-                        option multiple times to retrieve multiple IAVAs at
-                        once (use below --extract-cves option to lookup mapped
-                        CVEs)
-
 RETRIEVE SPECIFIC CVES:
   CVE-YYYY-NNNN         Retrieve a CVE or list of CVEs (e.g.:
                         'CVE-2016-5387'); note that case-insensitive regex-
                         matching is done -- extra characters & duplicate CVEs
                         will be discarded
   -x, --extract-cves    Extract CVEs from search query (as initiated by at
-                        least one of the --q-xxx options or the --iava option)
+                        least one of the --q-xxx options)
   -0, --stdin           Extract CVEs from stdin (CVEs will be matched by case-
                         insensitive regex 'CVE-[0-9]{4}-[0-9]{4,}' and
                         duplicates will be discarded); note that terminal
@@ -606,11 +536,11 @@ CVE DISPLAY OPTIONS:
                         date, affected_release → fixed_releases or fixed or
                         releases, package_state → fix_states or states;
                         optionally prepend FIELDS with plus (+) sign to add
-                        fields to the default (e.g., '-f +iava,cvss3') or a
-                        caret (^) to remove fields from all-fields (e.g., '-f
+                        fields to the default (e.g., '-f +cvss3') or a caret
+                        (^) to remove fields from all-fields (e.g., '-f
                         ^mitigation,severity')
   -a, --all-fields      Display all supported fields (currently:
-                        threat_severity, public_date, iava, cwe, cvss, cvss3,
+                        threat_severity, public_date, cwe, cvss, cvss3,
                         bugzilla, acknowledgement, details, statement,
                         mitigation, upstream_fix, references,
                         affected_release, package_state)
@@ -642,7 +572,7 @@ GENERAL OPTIONS:
                         default of 'notice' to see extra details printed to
                         stderr
   -t, --threads THREDS  Set number of concurrent worker threads to allow when
-                        making CVE queries (default on this system: 8)
+                        making CVE queries (default on this system: 48)
   -P, --pastebin        Send output to Fedora Project Pastebin
                         (paste.fedoraproject.org) and print only URL to stdout
   -E, --pexpire [DAYS]  Set time in days after which paste will be deleted
@@ -656,8 +586,8 @@ GENERAL OPTIONS:
   --help                Show this help message and exit
 
 VERSION:
-  rhsecapi v1.0.0_rc10 last mod 2017/01/05
-  See <http://github.com/ryran/rhsecapi> to report bugs or RFEs
+  rhsecapi v1.0.1 last mod 2017/06/27
+  See <https://github.com/RedHatOfficial/rhsecapi> to report bugs or RFEs
 ```
 
 
@@ -784,17 +714,6 @@ CLASSES
      |      With *outFormat* of "xml", returns unformatted XML as string.
      |      If *params* dict is passed, additional parameters are ignored.
      |  
-     |  find_iavas(self, params=None, outFormat='json', number=None, severity=None, page=None, per_page=None)
-     |      Find IAVA notices by recent or attributes.
-     |      
-     |      Provides an index to recent IAVA notices when no parameters are passed.
-     |      Each list item is a convenience object with minimal attributes.
-     |      Use parameters to narrow down results.
-     |      
-     |      With *outFormat* of "json", returns JSON object.
-     |      With *outFormat* of "xml", returns unformatted XML as string.
-     |      If *params* dict is passed, additional parameters are ignored.
-     |  
      |  find_ovals(self, params=None, outFormat='json', before=None, after=None, bug=None, cve=None, severity=None, page=None, per_page=None)
      |      Find OVAL definitions by recent or attributes.
      |      
@@ -814,9 +733,6 @@ CLASSES
      |  
      |  get_cvrf_oval(self, rhsa, outFormat='json')
      |      Retrieve CVRF-OVAL details for an RHSA.
-     |  
-     |  get_iava(self, iava, outFormat='json')
-     |      Retrieve notice details for an IAVA.
      |  
      |  get_oval(self, rhsa, outFormat='json')
      |      Retrieve OVAL details for an RHSA.
@@ -850,7 +766,7 @@ CLASSES
      |      ON *FIELDS*:
      |      
      |      librhsecapi.cveFields.all is a list obj of supported fields, i.e.:
-     |          threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla,
+     |          threat_severity, public_date, cwe, cvss, cvss3, bugzilla,
      |          acknowledgement, details, statement, mitigation, upstream_fix, references,
      |          affected_release, package_state
      |      
@@ -877,23 +793,6 @@ CLASSES
      |          fields="^releases,mitigation"
      |      
      |      Finally: *fields* is case-insensitive.
-     |  
-     |  mget_iavas(self, iavas, numThreads=0, onlyCount=False, outFormat='plaintext', urls=False, timeout=300)
-     |      Use multi-threading to lookup a list of IAVAs and return text output.
-     |      
-     |      *iavas*:      A list of IAVA ids
-     |      *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
-     |      *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
-     |      *outFormat*:  Control output format ("list", "plaintext", "json", or "jsonpretty")
-     |      *urls*:       Whether to add extra URLs to certain fields
-     |      *timeout*:    Total ammount of time to wait for all CVEs to be retrieved
-     |      
-     |      ON *OUTFORMAT*:
-     |      
-     |      Setting to "list" returns list object containing ONLY CVE ids.
-     |      Setting to "plaintext" returns str object containing formatted output.
-     |      Setting to "json" returns list object (i.e., original JSON)
-     |      Setting to "jsonpretty" returns str object containing prettified JSON
 
 FUNCTIONS
     extract_cves_from_input(obj, descriptiveNoun=None)

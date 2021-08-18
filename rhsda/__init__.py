@@ -1,4 +1,3 @@
-#!/usr/bin/python2
 # -*- coding: utf-8 -*-
 #-------------------------------------------------------------------------------
 # Copyright 2016, 2017
@@ -24,11 +23,15 @@ import re
 import textwrap, fcntl, termios, struct
 import json
 import signal
-import copy_reg
 import types
-import multiprocessing.dummy as multiprocessing
+import multiprocessing as multiprocessing
 from argparse import Namespace
 
+# Check to see if we are running Python 2 or 3
+try:
+    import copy_reg
+except:
+    import copyreg as copy_reg
 
 # Logging
 logging.addLevelName(25, 'NOTICE')
@@ -36,7 +39,7 @@ consolehandler = logging.StreamHandler()
 consolehandler.setLevel('DEBUG')
 consolehandler.setFormatter(logging.Formatter("[%(levelname)-7s] %(name)s: %(message)s"))
 logger = logging.getLogger('rhsda')
-logger.setLevel('NOTICE')
+logger.setLevel('WARNING')
 logger.addHandler(consolehandler)
 
 
@@ -46,7 +49,6 @@ cveFields = Namespace()
 cveFields.all = [
     'threat_severity',
     'public_date',
-    'iava',
     'cwe',
     'cvss',
     'cvss3',
@@ -72,7 +74,6 @@ cveFields.not_most = [
 cveFields.most = list(cveFields.all)
 for f in cveFields.not_most:
     cveFields.most.remove(f)
-del(f)
 # Simple set of most important fields
 cveFields.base = [
     'threat_severity',
@@ -101,7 +102,6 @@ cveFields.aliases_printable = [
 # A list of all fields + all aliases
 cveFields.all_plus_aliases = list(cveFields.all)
 cveFields.all_plus_aliases.extend([k for k in cveFields.aliases])
-del(k)
 
 
 # Regex to match a CVE id string
@@ -122,10 +122,15 @@ copy_reg.pickle(types.MethodType, _reduce_method)
 
 
 # Set default number of worker threads
-if multiprocessing.cpu_count() <= 2:
+try:
+    hardwareCPUCount = multiprocessing.cpu_count()
+except:
+    hardwareCPUCount = multiprocessing.dummy.cpu_count()
+
+if hardwareCPUCount <= 2:
     numThreadsDefault = 4
 else:
-    numThreadsDefault = multiprocessing.cpu_count() * 2
+    numThreadsDefault = hardwareCPUCount * 2
 
 
 def jprint(jsoninput):
@@ -183,7 +188,7 @@ class ApiClient:
         return w
 
     def __validate_data_type(self, dT):
-        dataTypes = ['cvrf', 'cve', 'oval', 'iava']
+        dataTypes = ['cvrf', 'cve', 'oval']
         if dT not in dataTypes:
             raise ValueError("Invalid data type ('{0}') requested; should be one of: {1}".format(dT, ", ".join(dataTypes)))
 
@@ -321,28 +326,6 @@ class ApiClient:
                 }
         return self._find('oval', params, outFormat)
 
-    def find_iavas(self, params=None, outFormat='json',
-                   number=None, severity=None,
-                   page=None, per_page=None):
-        """Find IAVA notices by recent or attributes.
-
-        Provides an index to recent IAVA notices when no parameters are passed.
-        Each list item is a convenience object with minimal attributes.
-        Use parameters to narrow down results.
-
-        With *outFormat* of "json", returns JSON object.
-        With *outFormat* of "xml", returns unformatted XML as string.
-        If *params* dict is passed, additional parameters are ignored.
-        """
-        if not params:
-            params = {
-                'number': number,
-                'severity': severity,
-                'page': page,
-                'per_page': per_page,
-                }
-        return self._find('iava', params, outFormat)
-
     def get_cvrf(self, rhsa, outFormat='json'):
         """Retrieve CVRF details for an RHSA."""
         return self._retrieve('cvrf', rhsa, outFormat)
@@ -358,10 +341,6 @@ class ApiClient:
     def get_oval(self, rhsa, outFormat='json'):
         """Retrieve OVAL details for an RHSA."""
         return self._retrieve('oval', rhsa, outFormat)
-
-    def get_iava(self, iava, outFormat='json'):
-        """Retrieve notice details for an IAVA."""
-        return self._retrieve('iava', iava, outFormat)
 
     def __stripjoin(self, input, oneLineEach=False):
         """Strip whitespace from input or input list."""
@@ -433,9 +412,6 @@ class ApiClient:
         # PUBLIC_DATE
         if self.__check_field('public_date', J):
             out.append("  DATE     : {0}".format(J['public_date'].split("T")[0]))
-        # IAVA
-        if self.__check_field('iava', J):
-            out.append("  IAVA     : {0}".format(J['iava']))
         # CWE ID
         if self.__check_field('cwe', J):
             out.append("  CWE      : {0}".format(J['cwe']))
@@ -551,60 +527,6 @@ class ApiClient:
         out.append("")
         return True, "\n".join(out)
 
-    def _get_and_parse_iava(self, iava):
-        """Generate a plaintext representation of an IAVA.
-
-        This is designed with only one argument in order to allow being used as a worker
-        with multiprocessing.Pool.map_async().
-
-        Various printing operations in this method are conditional upon (or are tweaked
-        by) the values in the self.cfg namespace as set in parent meth self.mget_iavas().
-        """
-        # Output array:
-        out = []
-        try:
-            # Store json
-            J = self.get_iava(iava)
-        except requests.exceptions.HTTPError as e:
-            # IAVA not in RH IAVA DB
-            logger.info(e)
-            if self.cfg.onlyCount or self.cfg.outFormat in ['list', 'json', 'jsonpretty']:
-                return False, "", 0
-            else:
-                return False, "{0}\n  Not present in Red Hat IAVA database\n".format(iava), 0
-        numCves = len(J['cvelist'])
-        # If json output requested
-        if self.cfg.outFormat.startswith('json'):
-            return True, J, numCves
-        # If CVE list output
-        elif self.cfg.outFormat == 'list': 
-            return True, J['cvelist'], numCves
-        # If onlyCount requested
-        elif self.cfg.onlyCount:
-            return True, "", numCves
-        # IAVA NUMBER
-        u = ""
-        if self.cfg.urls:
-            u = " ({0}/iava?number={1})".format(self.cfg.apiUrl, iava)
-        out.append("{0}{1}".format(iava, u))
-        # TITLE
-        out.append("  TITLE    : {0}".format(J['title']))
-        # SEVERITY
-        out.append("  SEVERITY : {0}".format(J['severity']))
-        # ID
-        out.append("  ID       : {0}".format(J['id']))
-        # CVELIST
-        if J['cvelist']:
-            out.append("  CVES     :")
-            for cve in J['cvelist']:
-                u = ""
-                if self.cfg.urls:
-                    u = " (https://access.redhat.com/security/cve/{0})".format(cve)
-                out.append("   {0}{1}".format(cve, u))
-        # Add one final newline to the end
-        out.append("")
-        return True, "\n".join(out), numCves
-
     def _set_cve_plaintext_fields(self, desiredFields):
         logger.debug("Requested fields string: '{0}'".format(desiredFields))
         if not desiredFields:
@@ -698,7 +620,7 @@ class ApiClient:
         ON *FIELDS*:
 
         librhsecapi.cveFields.all is a list obj of supported fields, i.e.:
-            threat_severity, public_date, iava, cwe, cvss, cvss3, bugzilla,
+            threat_severity, public_date, cwe, cvss, cvss3, bugzilla,
             acknowledgement, details, statement, mitigation, upstream_fix, references,
             affected_release, package_state
 
@@ -728,10 +650,20 @@ class ApiClient:
         """
         if outFormat not in ['plaintext', 'json', 'jsonpretty']:
             raise ValueError("Invalid outFormat ('{0}') requested; should be one of: 'plaintext', 'json', 'jsonpretty'".format(outFormat))
-        if isinstance(cves, str) or isinstance(cves, file):
-            cves = extract_cves_from_input(cves)
-        elif not isinstance(cves, list):
-            raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+        # This is necessary as Python3 doesn't have "file" types
+        try:
+            if isinstance(cves, (str, file)):
+                cves = extract_cves_from_input(cves)
+            elif not isinstance(cves, list):
+                raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+        except:
+            from io import IOBase
+
+            if isinstance(cves, (str, IOBase)):
+                cves = extract_cves_from_input(cves)
+            elif not isinstance(cves, list):
+                raise ValueError("Invalid 'cves=' argument input; must be list, string, or file obj")
+
         if not len(cves):
             if outFormat in ['plaintext', 'jsonpretty']:
                 return ""
@@ -790,77 +722,6 @@ class ApiClient:
             return cveOutput
         elif outFormat == 'jsonpretty':
             return jprint(cveOutput)
-
-    def mget_iavas(self, iavas, numThreads=0, onlyCount=False, outFormat='plaintext',
-                   urls=False, timeout=300):
-        """Use multi-threading to lookup a list of IAVAs and return text output.
-
-        *iavas*:      A list of IAVA ids
-        *numThreads*: Number of concurrent worker threads; 0 == CPUs*2
-        *onlyCount*:  Whether to exit after simply logging number of valid/invalid CVEs
-        *outFormat*:  Control output format ("list", "plaintext", "json", or "jsonpretty")
-        *urls*:       Whether to add extra URLs to certain fields
-        *timeout*:    Total ammount of time to wait for all CVEs to be retrieved
-
-        ON *OUTFORMAT*:
-
-        Setting to "list" returns list object containing ONLY CVE ids.
-        Setting to "plaintext" returns str object containing formatted output.
-        Setting to "json" returns list object (i.e., original JSON)
-        Setting to "jsonpretty" returns str object containing prettified JSON
-        """
-        if outFormat not in ['list', 'plaintext', 'json', 'jsonpretty']:
-            raise ValueError("Invalid outFormat ('{0}') requested; should be one of: 'list', 'plaintext', 'json', 'jsonpretty'".format(outFormat))
-        if not isinstance(iavas, list):
-            raise ValueError("Invalid 'iavas=' argument input; must be list obj")
-        # Configure threads
-        if not numThreads:
-            numThreads = numThreadsDefault
-        # Lower threads for small work-loads 
-        if numThreads > len(iavas):
-            numThreads = len(iavas)
-        logger.info("Using {0} worker threads".format(numThreads))
-        # Set cfg directives for our worker
-        self.cfg.onlyCount = onlyCount
-        self.cfg.outFormat = outFormat
-        self.cfg.urls = urls
-        # Disable sigint before starting process pool
-        original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-        pool = multiprocessing.Pool(processes=numThreads)
-        # Re-enable receipt of sigint
-        signal.signal(signal.SIGINT, original_sigint_handler)
-        # Allow cancelling with Ctrl-c
-        try:
-            p = pool.map_async(self._get_and_parse_iava, iavas)
-            # Need to specify timeout; see: http://stackoverflow.com/a/35134329
-            results = p.get(timeout=timeout)
-        except KeyboardInterrupt:
-            logger.error("Received KeyboardInterrupt; terminating worker threads")
-            pool.terminate()
-            raise
-        else:
-            pool.close()
-        pool.join()
-        successValues, iavaOutput, numCves = zip(*results)
-        n_total = len(iavas)
-        n_hidden = successValues.count(None)
-        n_valid = successValues.count(True)
-        logger.log(25, "Valid Red Hat IAVA results retrieved: {0} of {1}".format(n_valid + n_hidden, n_total))
-        if sum(numCves):
-            logger.log(25, "Number of CVEs mapped from retrieved IAVAs: {0}".format(sum(numCves)))
-        if outFormat == 'list':
-            cves = []
-            for cvelist in iavaOutput:
-                cves.extend(cvelist)
-            return cves
-        elif onlyCount:
-            return
-        if outFormat == 'plaintext':
-            return "\n".join(iavaOutput)
-        elif outFormat == 'json':
-            return iavaOutput
-        elif outFormat == 'jsonpretty':
-            return jprint(iavaOutput)
 
     def cve_search_query(self, params, outFormat='list', urls=False):
         """Perform a CVE search query.
