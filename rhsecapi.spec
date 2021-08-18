@@ -22,7 +22,7 @@ Source:     {{{ git_pack }}}
 
 %if %{with python3}
 BuildRequires:  python3-devel python3-setuptools
-Requires:	python3-argparse python3-requests
+Requires:	python3-requests
 %else
 BuildRequires:  python-devel python-setuptools
 Requires:	python-argparse python-requests
