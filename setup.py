@@ -21,7 +21,7 @@ contributions welcome.
 """
 setup(
     name = 'rhsecapi',
-    version = '1.0.2',
+    version = '1.0.3',
     author = 'Ryan Sawhill Aroha',
     author_email = 'rsaw@redhat.com',
     description = 'Provides a simple interface for the Red Hat Security Data API',
