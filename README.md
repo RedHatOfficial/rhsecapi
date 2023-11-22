@@ -179,6 +179,12 @@ sys	0m0.055s
   1. Optional: `mkdir -p ~/bin; ln -sv /PATH/TO/rhsecapi.py ~/bin/rhsecapi`
   1. Execute: `rhsecapi`
 
+- **Option 3: Install docker version**
+  1. cd rhsecpai
+  1. yum install docker for RHEL, can depend on your OS
+  1. chmod +x install_docker.sh
+  1. sudo ./install_docker.sh
+  1. rhsecapi.sh CVE-2015-4642
   
 ## Abbreviated usage
 

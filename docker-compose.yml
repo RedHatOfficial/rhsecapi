@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  centos_rhsecapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: centos_rhsecapi
+    restart: always
+    command: bash
+    tty: true
