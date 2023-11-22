@@ -25,4 +25,4 @@ EOF
 
 chmod +x /usr/bin/rhsecapi.sh
 
-echo "Script executed successfully."
+echo "rhsecapi docker installed!."
